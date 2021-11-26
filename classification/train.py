@@ -44,7 +44,7 @@ def train(train_dir, val_dir, model_dir, args):
 
     train_set = ClsDataset(train_dir)
     num_classes = 38
-    # val_set = ClsDataset(val_dir)
+    val_set = ClsDataset(val_dir)
 
     train_loader = DataLoader(
         train_set,
@@ -54,13 +54,13 @@ def train(train_dir, val_dir, model_dir, args):
         pin_memory=use_cuda,
     )
 
-    # val_loader = DataLoader(
-    #     val_set,
-    #     batch_size=args.batch_size,
-    #     num_workers=4,
-    #     shuffle=False,
-    #     pin_memory=use_cuda,
-    # )
+    val_loader = DataLoader(
+        val_set,
+        batch_size=args.batch_size,
+        num_workers=4,
+        shuffle=False,
+        pin_memory=use_cuda,
+    )
 
     # -- model
     model = ClsModel(num_classes=num_classes)
@@ -129,37 +129,37 @@ def train(train_dir, val_dir, model_dir, args):
         scheduler.step()
 
         #val loop
-        # with torch.no_grad():
-        #     print("Calculating validation results...")  
-        #     model.eval()
-        #     val_loss_items = []
-        #     val_acc_items = []
-        #     for val_batch in val_loader:
-        #         inputs, labels = val_batch
-        #         inputs = inputs.to(device)
-        #         labels = labels.to(device)
+        with torch.no_grad():
+            print("Calculating validation results...")  
+            model.eval()
+            val_loss_items = []
+            val_acc_items = []
+            for val_batch in val_loader:
+                inputs, labels = val_batch
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
-        #         outs = model(inputs)
-        #         preds = torch.argmax(outs, dim=-1)
+                outs = model(inputs)
+                preds = torch.argmax(outs, dim=-1)
 
-        #         loss_item = criterion(outs, labels).item()
-        #         acc_item = (labels==preds).sum().item()    
-        #         val_loss_items.append(loss_item)
-        #         val_acc_items.append(acc_item)
+                loss_item = criterion(outs, labels).item()
+                acc_item = (labels==preds).sum().item()    
+                val_loss_items.append(loss_item)
+                val_acc_items.append(acc_item)
 
-        #     val_loss = np.sum(val_loss_items) / len(val_loader)
-        #     val_acc = np.sum(val_acc_items) / len(val_set)
-        #     best_val_loss = min(best_val_loss, val_loss)
-        #     if val_acc > best_val_acc:
-        #         print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
-        #         torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
-        #         best_val_acc = val_acc
-        #     torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
-        #     print(
-        #         f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
-        #         f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
-        #     )
-        #     print()
+            val_loss = np.sum(val_loss_items) / len(val_loader)
+            val_acc = np.sum(val_acc_items) / len(val_set)
+            best_val_loss = min(best_val_loss, val_loss)
+            if val_acc > best_val_acc:
+                print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+                torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
+                best_val_acc = val_acc
+            torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
+            print(
+                f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
+                f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
+            )
+            print()
         
 
 if __name__ == '__main__':
@@ -177,8 +177,8 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './train'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './Validation'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './train_11'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './validation_11'))
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', './model'))
 
     args = parser.parse_args()
