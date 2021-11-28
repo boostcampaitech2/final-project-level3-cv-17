@@ -83,7 +83,7 @@ def train(train_dir, val_dir, model_dir, args):
         loss_value = 0
         matches = 0
         pbar = tqdm(enumerate(train_loader), total=len(train_loader))
-        for idx, train_batch in pbar:
+        for idx, train_batch in enumerate(train_loader):
             inputs, labels = train_batch
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -101,31 +101,31 @@ def train(train_dir, val_dir, model_dir, args):
             matches += (preds==labels).sum().item()
             
             
-            train_loss = loss_value / args.log_interval
-            train_acc = matches / args.batch_size / args.log_interval
-            current_lr = get_lr(optimizer)
+            # train_loss = loss_value / args.log_interval
+            # train_acc = matches / args.batch_size / args.log_interval
+            # current_lr = get_lr(optimizer)
 
-            pbar.update()
-            pbar.set_description(
-                f"Train: [{epoch + 1:03d}] "
-                f"Loss: {train_loss:.3f}, "
-                f"Acc: {train_acc * 100:.2f}% "
-                f"Lr: {current_lr}"
-            )
-            loss_value = 0
-            matches = 0
-            # if (idx + 1) % args.log_interval == 0:
-            #     train_loss = loss_value / args.log_interval
-            #     train_acc = matches / args.batch_size / args.log_interval
-            #     current_lr = get_lr(optimizer)
-            #     print(
-            #         f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
-            #         f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
-            #     )
+            # pbar.update()
+            # pbar.set_description(
+            #     f"Train: [{epoch + 1:03d}] "
+            #     f"Loss: {train_loss:.3f}, "
+            #     f"Acc: {train_acc * 100:.2f}% "
+            #     f"Lr: {current_lr}"
+            # )
+            # loss_value = 0
+            # matches = 0
+            if (idx + 1) % args.log_interval == 0:
+                train_loss = loss_value / args.log_interval
+                train_acc = matches / args.batch_size / args.log_interval
+                current_lr = get_lr(optimizer)
+                print(
+                    f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
+                    f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
+                )
 
-            #     loss_value = 0
-            #     matches = 0
-        pbar.close()
+                loss_value = 0
+                matches = 0
+        # pbar.close()
         scheduler.step()
 
         #val loop
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     # load_dotenv(verbose=True)
 
     # Data and model checkpoints directories
-    parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train (default: 1)')
+    parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train (default: 1)')
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
     parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
