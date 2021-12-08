@@ -43,7 +43,7 @@ def train(train_dir, val_dir, model_dir, args):
     device = torch.device("cuda" if use_cuda else "cpu")
 
     train_set = ClsDataset(train_dir)
-    num_classes = 38
+    num_classes = 5
     val_set = ClsDataset(val_dir)
 
     train_loader = DataLoader(
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     # load_dotenv(verbose=True)
 
     # Data and model checkpoints directories
-    parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train (default: 1)')
+    parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train (default: 1)')
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
     parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
@@ -177,8 +177,8 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './train_05/resize224'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './validation_05/resize224'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './data/train'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './data/valid'))
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', './model'))
 
     args = parser.parse_args()

@@ -1,7 +1,7 @@
 import os
 import random
 
-root = '[원천]음식분류_TRAIN_013/train/'
+root = '/opt/ml/final-project-level3-cv-17/classification/validaiton_11'
 
 folder_list = os.listdir(root)       # ['02012001','02012002', ...]
 for folder in folder_list:
@@ -21,7 +21,7 @@ for folder in folder_list:
             samples.append(k)
             file_id.remove(k)
 
-    samples = random.sample(samples, 200)
+    samples = random.sample(samples, 20)
 
     save=[]
     for f in file_list:
