@@ -15,14 +15,13 @@ class ClsDataset(Dataset):
         self.data_dir = data_dir
 
         self.transform = transforms.Compose([
-            Resize((224,224), Image.BILINEAR),
             ToTensor(),
             Normalize(mean=mean, std=std),
         ])
         self.setup()
 
     def setup(self):
-        image_folders = os.listdir(self.data_dir)
+        image_folders = sorted(os.listdir(self.data_dir))
         for idx, image_folder in enumerate(image_folders):      # 11011001~11015002
             image_path = os.path.join(self.data_dir, image_folder)
             for filename in os.listdir(image_path):
