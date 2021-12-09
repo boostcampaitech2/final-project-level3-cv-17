@@ -7,13 +7,17 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from torch.optim.lr_scheduler import StepLR
+from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from dataset import ClsDataset
-from model import ClsModel
+# from model import ClsModel
+from model import efficientnet_b0
+
+# from efficientnet_pytorch import EfficientNet
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
@@ -35,6 +39,33 @@ def increment_path(path, exist_ok=False, sep='', mkdir=True):
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
+def convert_model_to_torchscript(
+    model: nn.Module, path: Optional[str] = None
+) -> torch.jit.ScriptModule:
+    """Convert PyTorch Module to TorchScript.
+
+    Args:
+        model: PyTorch Module.
+
+    Return:
+        TorchScript module.
+    """
+    model.eval()
+    jit_model = torch.jit.script(model)
+
+    if path:
+        jit_model.save(path)
+
+    return jit_model
+
+
+def save_model(model, path, device, ckp):
+    """save model to torch script, onnx."""
+
+    torch.save(ckp, f=path)
+    ts_path = os.path.splitext(path)[:-1][0] + ".ts"
+    convert_model_to_torchscript(model, ts_path)
+
 
 def train(train_dir, val_dir, model_dir, args):
     save_dir = increment_path(os.path.join(model_dir, args.name)) # 모델 저장 경로
@@ -43,7 +74,7 @@ def train(train_dir, val_dir, model_dir, args):
     device = torch.device("cuda" if use_cuda else "cpu")
 
     train_set = ClsDataset(train_dir)
-    num_classes = 38
+    num_classes = len(os.listdir(train_dir))
     val_set = ClsDataset(val_dir)
 
     train_loader = DataLoader(
@@ -63,9 +94,10 @@ def train(train_dir, val_dir, model_dir, args):
     )
 
     # -- model
-    model = ClsModel(num_classes=num_classes)
+    # model = ClsModel(num_classes=num_classes)
+    model = efficientnet_b0(num_classes=num_classes)
     model = model.to(device)
-    model = nn.DataParallel(model)
+    # model = nn.DataParallel(model)
     # -- loss & optim
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
@@ -150,17 +182,39 @@ def train(train_dir, val_dir, model_dir, args):
             val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
             best_val_loss = min(best_val_loss, val_loss)
+
+            checkpoint = {
+                    'epoch': epoch + 1,
+                    'state_dict': model.state_dict(),
+                    'optimizer': optimizer.state_dict()
+                }
+
             if val_acc > best_val_acc:
                 print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
-                torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
+                # torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
+                
+                save_model(
+                        model=model,
+                        path=f"{save_dir}/best.pt",
+                        device=device,
+                        ckp=checkpoint,
+                    )
                 best_val_acc = val_acc
-            torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
+            # torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
+            save_model(
+                        model=model,
+                        path=f"{save_dir}/last.pt",
+                        device=device,
+                        ckp=checkpoint,
+                    )
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
             )
             print()
-        
+
+    
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

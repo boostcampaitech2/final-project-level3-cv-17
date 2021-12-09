@@ -6,3 +6,5 @@
 *.pyc
 *.zip
 *.pth
+data/
+models/
