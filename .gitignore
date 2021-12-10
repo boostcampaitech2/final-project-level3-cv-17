@@ -8,3 +8,5 @@
 *.pth
 *.pt
 *.ts
+data/
+models/
