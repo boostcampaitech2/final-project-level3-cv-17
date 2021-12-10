@@ -12,11 +12,34 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from typing import List, Optional, Tuple, Union
 from dataset import ClsDataset
-from model import ClsModel
-from efficientnet import efficientnet_b0
-from torchvision import models
+from model import efficientnet_b4, efficientnet_b0
+
+def convert_model_to_torchscript(
+    model: nn.Module, path
+) -> torch.jit.ScriptModule:
+    """Convert PyTorch Module to TorchScript.
+
+    Args:
+        model: PyTorch Module.
+
+    Return:
+        TorchScript module.
+    """
+    model.eval()
+    jit_model = torch.jit.script(model)
+
+    if path:
+        jit_model.save(path)
+
+    return jit_model
+
+def save_model(model, path, device, ckp):
+    """save model to torch script, onnx."""
+
+    torch.save(ckp, f=path)
+    ts_path = os.path.splitext(path)[:-1][0] + ".ts"
+    convert_model_to_torchscript(model, ts_path)
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
@@ -38,24 +61,6 @@ def increment_path(path, exist_ok=False, sep='', mkdir=True):
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
-def convert_model_to_torchscript(
-    model: nn.Module, path: Optional[str] = None
-) -> torch.jit.ScriptModule:
-    """Convert PyTorch Module to TorchScript.
-
-    Args:
-        model: PyTorch Module.
-
-    Return:
-        TorchScript module.
-    """
-    # model.eval()
-    jit_model = torch.jit.script(model)
-
-    if path:
-        jit_model.save(path)
-
-    return jit_model
 
 def train(train_dir, val_dir, model_dir, args):
     save_dir = increment_path(os.path.join(model_dir, args.name)) # 모델 저장 경로
@@ -64,8 +69,6 @@ def train(train_dir, val_dir, model_dir, args):
     device = torch.device("cuda" if use_cuda else "cpu")
 
     train_set = ClsDataset(train_dir)
-    num_classes = len(os.listdir(train_dir))
-    print(f'num_classes = {num_classes}')
     val_set = ClsDataset(val_dir)
 
     train_loader = DataLoader(
@@ -85,9 +88,7 @@ def train(train_dir, val_dir, model_dir, args):
     )
 
     # -- model
-    # model = ClsModel(num_classes=num_classes)
-    model = efficientnet_b0(num_classes=num_classes)
-
+    model = efficientnet_b0(num_classes=args.num_classes)
     model = model.to(device)
     # model = nn.DataParallel(model)
     # -- loss & optim
@@ -106,7 +107,7 @@ def train(train_dir, val_dir, model_dir, args):
         model.train()
         loss_value = 0
         matches = 0
-
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         for idx, train_batch in enumerate(train_loader):
             inputs, labels = train_batch
             inputs = inputs.to(device)
@@ -124,6 +125,20 @@ def train(train_dir, val_dir, model_dir, args):
             loss_value += loss.item()
             matches += (preds==labels).sum().item()
             
+            
+            # train_loss = loss_value / args.log_interval
+            # train_acc = matches / args.batch_size / args.log_interval
+            # current_lr = get_lr(optimizer)
+
+            # pbar.update()
+            # pbar.set_description(
+            #     f"Train: [{epoch + 1:03d}] "
+            #     f"Loss: {train_loss:.3f}, "
+            #     f"Acc: {train_acc * 100:.2f}% "
+            #     f"Lr: {current_lr}"
+            # )
+            # loss_value = 0
+            # matches = 0
             if (idx + 1) % args.log_interval == 0:
                 train_loss = loss_value / args.log_interval
                 train_acc = matches / args.batch_size / args.log_interval
@@ -135,7 +150,7 @@ def train(train_dir, val_dir, model_dir, args):
 
                 loss_value = 0
                 matches = 0
-                
+        # pbar.close()
         scheduler.step()
 
         #val loop
@@ -162,11 +177,31 @@ def train(train_dir, val_dir, model_dir, args):
             best_val_loss = min(best_val_loss, val_loss)
             if val_acc > best_val_acc:
                 print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
-                torch.save(model.state_dict(), f"{save_dir}/best.pth")
-                convert_model_to_torchscript(model, f'{save_dir}/best.ts')
-
+                checkpoint = {
+                    'epoch': epoch + 1,
+                    'state_dict': model.state_dict(),
+                    'optimizer': optimizer.state_dict()
+                }
+                save_model(
+                        model=model,
+                        path=f"{save_dir}/best.pt",
+                        device=device,
+                        ckp=checkpoint,
+                    )
+                # torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
                 best_val_acc = val_acc
-            torch.save(model.state_dict(), f"{save_dir}/last.pth")
+            checkpoint = {
+                    'epoch': epoch + 1,
+                    'state_dict': model.state_dict(),
+                    'optimizer': optimizer.state_dict()
+                }
+            save_model(
+                    model=model,
+                    path=f"{save_dir}/last.pt",
+                    device=device,
+                    ckp=checkpoint,
+                )
+            # torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
@@ -187,11 +222,12 @@ if __name__ == '__main__':
     parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
     parser.add_argument('--log_interval', type=int, default=1, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
+    parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './train_05/resize224'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './validation_05/resize224'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', './model'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'b0/train_new'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'b0/val_new'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
 
     args = parser.parse_args()
     print(args)
@@ -199,5 +235,5 @@ if __name__ == '__main__':
     train_dir = args.train_dir
     val_dir = args.val_dir
     model_dir = args.model_dir
-
+    print('num_classes:', args.num_classes)
     train(train_dir, val_dir, model_dir, args)

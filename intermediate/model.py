@@ -1,7 +1,6 @@
 
 import torch.nn as nn
-# from efficientnet_pytorch import EfficientNet
-from efficientnet.model import EfficientNet
+from efficientnet_pytorch import EfficientNet
 
 class ClsModel(nn.Module):
     def __init__(self, num_classes):
