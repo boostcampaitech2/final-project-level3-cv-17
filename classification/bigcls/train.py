@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from dataset import ClsDataset
+from dataset import ClsDataset, SmallDataset
 from model import efficientnet_b4, efficientnet_b0
 
 def convert_model_to_torchscript(
@@ -68,8 +68,10 @@ def train(train_dir, val_dir, model_dir, args):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    train_set = ClsDataset(train_dir)
-    val_set = ClsDataset(val_dir)
+    train_set = SmallDataset(train_dir)
+    val_set = SmallDataset(val_dir)
+    num_classes = len(os.listdir(train_dir))
+    print(f'num_classes = {num_classes}')
 
     train_loader = DataLoader(
         train_set,
@@ -88,7 +90,7 @@ def train(train_dir, val_dir, model_dir, args):
     )
 
     # -- model
-    model = efficientnet_b0(num_classes=args.num_classes)
+    model = efficientnet_b0(num_classes=num_classes)
     model = model.to(device)
     # model = nn.DataParallel(model)
     # -- loss & optim
@@ -125,20 +127,6 @@ def train(train_dir, val_dir, model_dir, args):
             loss_value += loss.item()
             matches += (preds==labels).sum().item()
             
-            
-            # train_loss = loss_value / args.log_interval
-            # train_acc = matches / args.batch_size / args.log_interval
-            # current_lr = get_lr(optimizer)
-
-            # pbar.update()
-            # pbar.set_description(
-            #     f"Train: [{epoch + 1:03d}] "
-            #     f"Loss: {train_loss:.3f}, "
-            #     f"Acc: {train_acc * 100:.2f}% "
-            #     f"Lr: {current_lr}"
-            # )
-            # loss_value = 0
-            # matches = 0
             if (idx + 1) % args.log_interval == 0:
                 train_loss = loss_value / args.log_interval
                 train_acc = matches / args.batch_size / args.log_interval
@@ -216,17 +204,17 @@ if __name__ == '__main__':
     # load_dotenv(verbose=True)
 
     # Data and model checkpoints directories
-    parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train (default: 1)')
-    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train (default: 1)')
+    parser.add_argument('--batch_size', type=int, default=32, help='input batch size for training (default: 64)')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
-    parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
-    parser.add_argument('--log_interval', type=int, default=1, help='how many batches to wait before logging training status')
+    parser.add_argument('--lr_decay_step', type=int, default=5, help='learning rate scheduler deacy step (default: 20)')
+    parser.add_argument('--log_interval', type=int, default=5, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
     parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'b0/train_new'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'b0/val_new'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train/rice'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/valid/rice'))
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
 
     args = parser.parse_args()
@@ -235,5 +223,5 @@ if __name__ == '__main__':
     train_dir = args.train_dir
     val_dir = args.val_dir
     model_dir = args.model_dir
-    print('num_classes:', args.num_classes)
+    # print('num_classes:', args.num_classes)
     train(train_dir, val_dir, model_dir, args)
