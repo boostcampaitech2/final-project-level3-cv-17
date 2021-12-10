@@ -1,7 +1,7 @@
 
 import torch
 import torch.nn as nn
-# from efficientnet_pytorch import EfficientNet
+from efficientnet_pytorch import EfficientNet as efficientNet
 import mlconfig
 import math
 
@@ -217,7 +217,7 @@ def efficientnet_b0(pretrained=True, num_classes=100, progress=True, **kwargs):
 class ClsModel(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
-        self.model = EfficientNet.from_pretrained('efficientnet-b0')
+        self.model = efficientNet.from_pretrained('efficientnet-b0')
         self.fc = nn.Sequential(
             nn.Linear(1280, 512, bias=True),
             nn.ReLU(),
