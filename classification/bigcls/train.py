@@ -7,18 +7,39 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from torch.optim.lr_scheduler import StepLR
-from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from typing import List, Optional, Tuple, Union
-from dataset import ClsDataset
-# from model import ClsModel
-from model import efficientnet_b0
+from dataset import ClsDataset, SmallDataset
+from model import efficientnet_b4, efficientnet_b0
 
-# from efficientnet_pytorch import EfficientNet
+def convert_model_to_torchscript(
+    model: nn.Module, path
+) -> torch.jit.ScriptModule:
+    """Convert PyTorch Module to TorchScript.
+
+    Args:
+        model: PyTorch Module.
+
+    Return:
+        TorchScript module.
+    """
+    model.eval()
+    jit_model = torch.jit.script(model)
+
+    if path:
+        jit_model.save(path)
+
+    return jit_model
+
+def save_model(model, path, device, ckp):
+    """save model to torch script, onnx."""
+
+    torch.save(ckp, f=path)
+    ts_path = os.path.splitext(path)[:-1][0] + ".ts"
+    convert_model_to_torchscript(model, ts_path)
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
@@ -40,33 +61,6 @@ def increment_path(path, exist_ok=False, sep='', mkdir=True):
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
-def convert_model_to_torchscript(
-    model: nn.Module, path: Optional[str] = None
-) -> torch.jit.ScriptModule:
-    """Convert PyTorch Module to TorchScript.
-
-    Args:
-        model: PyTorch Module.
-
-    Return:
-        TorchScript module.
-    """
-    model.eval()
-    jit_model = torch.jit.script(model)
-
-    if path:
-        jit_model.save(path)
-
-    return jit_model
-
-
-def save_model(model, path, device, ckp):
-    """save model to torch script, onnx."""
-
-    torch.save(ckp, f=path)
-    ts_path = os.path.splitext(path)[:-1][0] + ".ts"
-    convert_model_to_torchscript(model, ts_path)
-
 
 def train(train_dir, val_dir, model_dir, args):
     save_dir = increment_path(os.path.join(model_dir, args.name)) # 모델 저장 경로
@@ -74,9 +68,10 @@ def train(train_dir, val_dir, model_dir, args):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    train_set = ClsDataset(train_dir)
+    train_set = SmallDataset(train_dir)
+    val_set = SmallDataset(val_dir)
     num_classes = len(os.listdir(train_dir))
-    val_set = ClsDataset(val_dir)
+    print(f'num_classes = {num_classes}')
 
     train_loader = DataLoader(
         train_set,
@@ -95,7 +90,6 @@ def train(train_dir, val_dir, model_dir, args):
     )
 
     # -- model
-    # model = ClsModel(num_classes=num_classes)
     model = efficientnet_b0(num_classes=num_classes)
     model = model.to(device)
     # model = nn.DataParallel(model)
@@ -115,7 +109,7 @@ def train(train_dir, val_dir, model_dir, args):
         model.train()
         loss_value = 0
         matches = 0
-
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         for idx, train_batch in enumerate(train_loader):
             inputs, labels = train_batch
             inputs = inputs.to(device)
@@ -144,7 +138,7 @@ def train(train_dir, val_dir, model_dir, args):
 
                 loss_value = 0
                 matches = 0
-                
+        # pbar.close()
         scheduler.step()
 
         #val loop
@@ -169,39 +163,39 @@ def train(train_dir, val_dir, model_dir, args):
             val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
             best_val_loss = min(best_val_loss, val_loss)
-
-            checkpoint = {
+            if val_acc > best_val_acc:
+                print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+                checkpoint = {
                     'epoch': epoch + 1,
                     'state_dict': model.state_dict(),
                     'optimizer': optimizer.state_dict()
                 }
-
-            if val_acc > best_val_acc:
-                print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
-                # torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
-                
                 save_model(
                         model=model,
                         path=f"{save_dir}/best.pt",
                         device=device,
                         ckp=checkpoint,
                     )
+                # torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
                 best_val_acc = val_acc
-            # torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
+            checkpoint = {
+                    'epoch': epoch + 1,
+                    'state_dict': model.state_dict(),
+                    'optimizer': optimizer.state_dict()
+                }
             save_model(
-                        model=model,
-                        path=f"{save_dir}/last.pt",
-                        device=device,
-                        ckp=checkpoint,
-                    )
+                    model=model,
+                    path=f"{save_dir}/last.pt",
+                    device=device,
+                    ckp=checkpoint,
+                )
+            # torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
             )
             print()
-
-    
-
+        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -210,17 +204,18 @@ if __name__ == '__main__':
     # load_dotenv(verbose=True)
 
     # Data and model checkpoints directories
-    parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train (default: 1)')
-    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train (default: 1)')
+    parser.add_argument('--batch_size', type=int, default=32, help='input batch size for training (default: 64)')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
-    parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
-    parser.add_argument('--log_interval', type=int, default=1, help='how many batches to wait before logging training status')
+    parser.add_argument('--lr_decay_step', type=int, default=5, help='learning rate scheduler deacy step (default: 20)')
+    parser.add_argument('--log_interval', type=int, default=5, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
+    parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './train_05/resize224'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', './validation_05/resize224'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', './model'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train/rice'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/valid/rice'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
 
     args = parser.parse_args()
     print(args)
@@ -228,5 +223,5 @@ if __name__ == '__main__':
     train_dir = args.train_dir
     val_dir = args.val_dir
     model_dir = args.model_dir
-
+    # print('num_classes:', args.num_classes)
     train(train_dir, val_dir, model_dir, args)
