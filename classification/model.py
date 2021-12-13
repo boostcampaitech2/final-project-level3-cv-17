@@ -1,10 +1,8 @@
-
-import torch
-import torch.nn as nn
-from efficientnet_pytorch import EfficientNet as efficientNet
-import mlconfig
 import math
 
+import mlconfig
+import torch
+from torch import nn
 
 try:
     from torch.hub import load_state_dict_from_url
@@ -13,10 +11,24 @@ except ImportError:
 
 model_urls = {
     'efficientnet_b0': 'https://www.dropbox.com/s/9wigibun8n260qm/efficientnet-b0-4cfa50.pth?dl=1',
+    'efficientnet_b1': 'https://www.dropbox.com/s/6745ear79b1ltkh/efficientnet-b1-ef6aa7.pth?dl=1',
+    'efficientnet_b2': 'https://www.dropbox.com/s/0dhtv1t5wkjg0iy/efficientnet-b2-7c98aa.pth?dl=1',
+    'efficientnet_b3': 'https://www.dropbox.com/s/5uqok5gd33fom5p/efficientnet-b3-bdc7f4.pth?dl=1',
+    'efficientnet_b4': 'https://www.dropbox.com/s/y2nqt750lixs8kc/efficientnet-b4-3e4967.pth?dl=1',
+    'efficientnet_b5': 'https://www.dropbox.com/s/qxonlu3q02v9i47/efficientnet-b5-4c7978.pth?dl=1',
+    'efficientnet_b6': None,
+    'efficientnet_b7': None,
 }
 
 params = {
-    'efficientnet_b0': (1.0, 1.0, 224, 0.2),
+    'efficientnet_b0': (1.0, 1.0, 224, 0.2),    
+    'efficientnet_b1': (1.0, 1.1, 240, 0.2),
+    'efficientnet_b2': (1.1, 1.2, 260, 0.3),
+    'efficientnet_b3': (1.2, 1.4, 300, 0.3),
+    'efficientnet_b4': (1.4, 1.8, 380, 0.4),
+    'efficientnet_b5': (1.6, 2.2, 456, 0.4),
+    'efficientnet_b6': (1.8, 2.6, 528, 0.5),
+    'efficientnet_b7': (2.0, 3.1, 600, 0.5),
 }
 
 
@@ -214,24 +226,7 @@ def _efficientnet(arch, pretrained, progress, num_classes, **kwargs):
 def efficientnet_b0(pretrained=True, num_classes=100, progress=True, **kwargs):
     return _efficientnet('efficientnet_b0', pretrained, progress, num_classes, **kwargs)
 
-class ClsModel(nn.Module):
-    def __init__(self, num_classes):
-        super().__init__()
-        self.model = efficientNet.from_pretrained('efficientnet-b0')
-        self.fc = nn.Sequential(
-            nn.Linear(1280, 512, bias=True),
-            nn.ReLU(),
-            nn.Linear(512, 256, bias=True),
-            nn.ReLU(),
-            nn.Linear(256, 128, bias=True),
-            nn.ReLU(),
-            nn.Linear(128, num_classes, bias=True)
-        )
-    def forward(self, x):
-        x = self.model.extract_features(x)
-        x = self.model._avg_pooling(x)
-        
-        x = x.flatten(start_dim=1)
-        x = self.model._dropout(x)
-        x = self.fc(x)
-        return x
+    
+@mlconfig.register
+def efficientnet_b4(pretrained=True, num_classes=100, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b4', pretrained, progress, num_classes, **kwargs)
