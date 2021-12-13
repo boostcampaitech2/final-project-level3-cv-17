@@ -75,8 +75,8 @@ def train(train_dir, val_dir, model_dir, args):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    train_set = BigDataset(train_dir, 'train')
-    val_set = BigDataset(val_dir, 'valid')
+    train_set = SmallDataset(train_dir, 'train')
+    val_set = SmallDataset(val_dir, 'valid')
     num_classes = len(os.listdir(train_dir))
     print(f'num_classes = {num_classes}')
 
@@ -102,20 +102,21 @@ def train(train_dir, val_dir, model_dir, args):
     # model = nn.DataParallel(model)
     # -- loss & optim
     criterion = nn.CrossEntropyLoss()
-    optimizer = SGD(
-        params=model.parameters(),
-        lr=args.lr,
-        momentum=0.9,
-        weight_decay=0.01    
-    )
-    # optimizer = torch.optim.Adam(
-    #     model.parameters(),
+    
+    # optimizer = SGD(
+    #     params=model.parameters(),
     #     lr=args.lr,
-    #     )
-    # scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
-    print(len(val_set), len(val_loader))
-    T_0 = int(len(train_loader) * args.epochs//5)
-    scheduler = CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0)
+    #     momentum=0.9,
+    #     weight_decay=0.01    
+    # )
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=args.lr,
+        )
+    scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    
+    # T_0 = int(len(train_loader) * args.epochs//5)
+    # scheduler = CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0)
 
 
     best_val_acc = 0
@@ -139,7 +140,7 @@ def train(train_dir, val_dir, model_dir, args):
 
             loss.backward()
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
 
             loss_value += loss.item()
             matches += (preds==labels).sum().item()
@@ -161,6 +162,7 @@ def train(train_dir, val_dir, model_dir, args):
                 loss_value = 0
                 matches = 0
         # pbar.close()
+        scheduler.step()
 
         #val loop
         with torch.no_grad():
@@ -244,8 +246,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/valid'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train/herbs'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/valid/herbs'))
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
 
     args = parser.parse_args()
