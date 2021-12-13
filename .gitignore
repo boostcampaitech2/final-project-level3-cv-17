@@ -7,5 +7,7 @@
 *.pyc
 *.zip
 *.pth
-*.ts
 *.pt
+*.ts
+data/
+models/

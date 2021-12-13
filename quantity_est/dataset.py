@@ -7,11 +7,9 @@ from torchvision.transforms import *
 
 
 class ClsDataset(Dataset):
-    image_paths = []
-    food_labels = []
-
     def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
-        
+        self.image_paths = []
+        self.food_labels = []
         self.data_dir = data_dir
 
         self.transform = transforms.Compose([
