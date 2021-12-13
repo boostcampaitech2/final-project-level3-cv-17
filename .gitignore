@@ -3,6 +3,9 @@
 *.JPG
 *.JPEG
 *.png
+*.PNG
 *.pyc
 *.zip
 *.pth
+*.ts
+*.pt
