@@ -153,11 +153,17 @@ def train(train_dir, val_dir, model_dir, args):
                     f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
+                
+                img_log = []
+                for input, pred, label in zip(inputs, preds, labels):
+                    caption = f'pred : {pred.cpu()}, label : {label.cpu()}'
+                    img_log.append(wandb.Image(input.cpu(), caption=caption))
                 wandb.log({
                     'loss': train_loss,
                     'lr': current_lr,
                     'acc':train_acc,
-                    'epoch':epoch
+                    'epoch':epoch,
+                    'img': img_log
                 })
                 loss_value = 0
                 matches = 0
@@ -197,7 +203,7 @@ def train(train_dir, val_dir, model_dir, args):
                 checkpoint = {
                     'epoch': epoch + 1,
                     'state_dict': model.state_dict(),
-                    'optimizer': optimizer.state_dict()
+                    'optimizer': optimizer.state_dict(),
                 }
                 save_model(
                         model=model,
