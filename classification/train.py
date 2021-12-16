@@ -3,11 +3,7 @@ import glob
 from math import gamma
 import re
 import os
-<<<<<<< HEAD
-import cv2
-=======
 import random
->>>>>>> 6a3613071a00a07a3a8631b0ad60021eb7e690bb
 import numpy as np
 from importlib import import_module
 
@@ -300,7 +296,6 @@ if __name__ == '__main__':
     parser.add_argument('--log_interval', type=int, default=20, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
     parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
-<<<<<<< HEAD
     parser.add_argument('--save', dest='save', default=False, action='store_true')
     parser.add_argument('--dataset', type=str, default='SmallDataset', help='dataset type (default: SmallDataset)')
 
@@ -308,14 +303,6 @@ if __name__ == '__main__':
     parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'new_data/train'))
     parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'new_data/valid'))
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model2'))
-=======
-    parser.add_argument('--save', dest='save', default=True, action='store_true')
-
-    # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train/dumpling'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/val/dumpling'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
->>>>>>> 6a3613071a00a07a3a8631b0ad60021eb7e690bb
 
     args = parser.parse_args()
     print(args)
