@@ -3,7 +3,11 @@ import glob
 from math import gamma
 import re
 import os
+<<<<<<< HEAD
 import cv2
+=======
+import random
+>>>>>>> 6a3613071a00a07a3a8631b0ad60021eb7e690bb
 import numpy as np
 from importlib import import_module
 
@@ -26,6 +30,15 @@ from dataset import BigDataset, SmallDataset
 from model import efficientnet_b4, efficientnet_b0
 
 import wandb
+
+def seed_everything(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    # torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    # np.random.seed(seed)
+    random.seed(seed)
 
 def convert_model_to_torchscript(
     model: nn.Module, path
@@ -75,7 +88,10 @@ def increment_path(path, exist_ok=False, sep='', mkdir=True):
 
 
 def train(train_dir, val_dir, model_dir, args):
-    wandb.init(project='final', entity='hansss', name=f'{args.name}')
+    seed_everything(args.seed)
+
+    wandb.init(project='Final_Project', entity='yoorichae', name=f'{args.name}')
+    
     if args.save:
         save_dir = increment_path(os.path.join(model_dir, args.name)) # 모델 저장 경로
     
@@ -116,9 +132,11 @@ def train(train_dir, val_dir, model_dir, args):
     model = efficientnet_b0(num_classes=num_classes)
     model = model.to(device)
     # model = nn.DataParallel(model)
+
     # -- loss & optim
     criterion = nn.CrossEntropyLoss()
-    
+    # criterion = F1_Loss(classes=args.num_classes)
+
     # optimizer = SGD(
     #     params=model.parameters(),
     #     lr=args.lr,
@@ -160,7 +178,7 @@ def train(train_dir, val_dir, model_dir, args):
 
             loss_value += loss.item()
             matches += (preds==labels).sum().item()
-            
+
             if (idx + 1) % args.log_interval == 0:
                 train_loss = loss_value / args.log_interval
                 train_acc = matches / args.batch_size / args.log_interval
@@ -189,7 +207,6 @@ def train(train_dir, val_dir, model_dir, args):
             val_acc_items = []
             val_acc_list = np.zeros(num_classes)
 
-            
             for idx, val_batch in enumerate(val_loader):
                 inputs, labels = val_batch
                 inputs = inputs.to(device)
@@ -202,7 +219,7 @@ def train(train_dir, val_dir, model_dir, args):
                 acc_item = (labels==preds).sum().item()    
                 val_loss_items.append(loss_item)
                 val_acc_items.append(acc_item)
-                
+
                 for label, pred in zip(labels, preds):
                     if label==pred:
                         val_acc_list[pred.cpu()] += 1
@@ -263,6 +280,7 @@ def train(train_dir, val_dir, model_dir, args):
             wandb.log({
                     'val/acc': val_acc,
                     'val/loss': val_loss,
+                    'val/epoch': epoch,
                     'val_img': img_log                    
             })
         
@@ -274,6 +292,7 @@ if __name__ == '__main__':
     # load_dotenv(verbose=True)
 
     # Data and model checkpoints directories
+    parser.add_argument('--seed', type=int, default=2021, help='random seed (default: 2021)')
     parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train (default: 1)')
     parser.add_argument('--batch_size', type=int, default=32, help='input batch size for training (default: 64)')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate (default: 1e-3)')
@@ -281,6 +300,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_interval', type=int, default=20, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
     parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
+<<<<<<< HEAD
     parser.add_argument('--save', dest='save', default=False, action='store_true')
     parser.add_argument('--dataset', type=str, default='SmallDataset', help='dataset type (default: SmallDataset)')
 
@@ -288,6 +308,14 @@ if __name__ == '__main__':
     parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'new_data/train'))
     parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'new_data/valid'))
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model2'))
+=======
+    parser.add_argument('--save', dest='save', default=True, action='store_true')
+
+    # Container environment
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train/dumpling'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/val/dumpling'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
+>>>>>>> 6a3613071a00a07a3a8631b0ad60021eb7e690bb
 
     args = parser.parse_args()
     print(args)
