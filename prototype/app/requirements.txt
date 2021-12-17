@@ -1,0 +1,41 @@
+anyio @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/02/db/a2/743db41e3d9850f14517dbf54400d960041e2ccf91ee5a6bb064bfff89/anyio-3.4.0-py3-none-any.whl
+asgiref @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/bd/31/74/b1bb0a15435f1f77e7ea3f7c6c2e9ca482e04987f6c6b26a5d9eca5c08/asgiref-3.4.1-py3-none-any.whl
+atomicwrites @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/95/a4/7f/79fd2907f8f04731bf4bdb0dd2a2a025b49c90f1d13da2821828e54255/atomicwrites-1.4.0-py2.py3-none-any.whl
+attrs @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/9e/6f/95/f4bd71c5acad2b4bbea55d3023e8221fce07e7df6b9da06439c5921b89/attrs-21.2.0-py2.py3-none-any.whl
+black @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/87/d1/97/e6fe54b7b2abd165602faaf4d82161a4e43219e057cbbc8fe0acbe8fe4/black-21.12b0-py3-none-any.whl
+click @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/6d/5e/aa/fb3ca17194ba9f3feb84939d73a0692cc5492cebad062aaed8cc6cf1b6/click-8.0.3-py3-none-any.whl
+colorama @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/33/a2/a4/09f68d0a2176d987da70e9dee0eaea3cc48f68b56a7fa8ac56c2d22dc7/colorama-0.4.4-py2.py3-none-any.whl
+fastapi @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/4c/4e/de/4f2001ae0e187079cf6dd076be08316a8ccb609276b964b828945c6f18/fastapi-0.70.1-py3-none-any.whl
+h11 @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/6d/de/ac/897288fbc7ee461ac2730f6a849778b1bb0578f8683f98c6459388e2c4/h11-0.12.0-py3-none-any.whl
+idna @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/d1/29/f1/812f74c0208a13cc843f388f1ef3ae38195e26f2bb7e4f065f91a83a65/idna-3.3-py3-none-any.whl
+importlib-metadata @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/9c/ad/56/56a4c8eeb79de8ada9461d372ac1a4140fbfcaa0a019224e5d25da1bca/importlib_metadata-4.8.2-py3-none-any.whl
+iniconfig @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/4b/53/0d/5ec25cd18ec0e1022085b2591e331f7d09cebac8403d91b26963219a0c/iniconfig-1.1.1-py2.py3-none-any.whl
+mlconfig==0.1.0
+mypy-extensions @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/41/fb/ef/133cd18a3e22a06b8d77dfe2ba71c50c509e4d2484ee619c6631c0b5b2/mypy_extensions-0.4.3-py2.py3-none-any.whl
+numpy==1.21.4
+opencv-python==4.5.4.60
+packaging @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/e7/69/d8/c898ce544c13176aff1086ce98482795d26eba3a19ba8b061818e93f71/packaging-21.3-py3-none-any.whl
+pandas==1.3.5
+pathspec @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/e2/1c/f0/be9f6d96592b92339d4f269d62876cf2202b36d0dd8ca3c7542dd34a5f/pathspec-0.9.0-py2.py3-none-any.whl
+Pillow==8.4.0
+platformdirs @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/b0/d0/e9/f175fe9e6d183b1244e2c0029d117bd543e339549934aa98cec6d284fa/platformdirs-2.4.0-py3-none-any.whl
+pluggy @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/a2/f2/fb/af06d2ada5b50ffeebc30019cb53c9f59430772091f3bd8f37635bfcb1/pluggy-1.0.0-py2.py3-none-any.whl
+py @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/77/d8/b6/ed4363fe675755db81377dcfd5156902eb663233f55f9931c01ec8c653/py-1.11.0-py2.py3-none-any.whl
+pydantic @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/09/65/ed/bc5c83f1a1be3b34468bce34f6c615acda3b8739615486640060c4b4d0/pydantic-1.8.2-cp37-cp37m-win_amd64.whl
+pyparsing @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/86/38/0a/ebfb8df550a712088942d15e4f3f969ddec1e7d1dc6c4c5761a76e3083/pyparsing-3.0.6-py3-none-any.whl
+pytest @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/23/2d/43/9ef36e6f884bafbda72b71fd6045824896fcfdfb983e04fd461cecd1ef/pytest-6.2.5-py3-none-any.whl
+python-dateutil==2.8.2
+python-multipart==0.0.5
+pytz==2021.3
+PyYAML==6.0
+six==1.16.0
+sniffio @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/b9/dd/a5/83174b936f8c8a9706b022caff72ba4d3c573a1946843e5390a46c0f11/sniffio-1.2.0-py3-none-any.whl
+starlette @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/2c/e1/26/a71a1606ee01f876da3638c77bae811e56af7bf73467d2bad8dc6e3eb0/starlette-0.16.0-py3-none-any.whl
+toml @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/4f/28/bf/d86336a479a830a4e11505920e408af09c2f5c129c3b59500aa93387fb/toml-0.10.2-py2.py3-none-any.whl
+tomli @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/fa/e3/7a/b665121a311cc3add9d7dfcf5d346c8a9106593df77fdf20945d67e274/tomli-1.2.3-py3-none-any.whl
+torch==1.10.0
+torchvision==0.11.1
+typed-ast @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/54/18/b2/d8e012c4386177a92df9fa5fb7d2db17e99bf1d7e9f2a5b7e10fa88ad3/typed_ast-1.5.1-cp37-cp37m-win_amd64.whl
+typing_extensions @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/57/f3/a4/377cea762fe11a1720164d52982ca19073d5f1231f012c1a3fb06af567/typing_extensions-4.0.1-py3-none-any.whl
+uvicorn @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/78/20/d5/1cc49043729cfd987b934a14595ad57df78819fbf635f759563011e7f3/uvicorn-0.15.0-py3-none-any.whl
+zipp @ file:///C:/Users/hans/AppData/Local/pypoetry/Cache/artifacts/fb/b1/aa/cbf5bcb38b8bd2bf677d51ebe9026188e5dcbc2deb2608d847f8e75e38/zipp-3.6.0-py3-none-any.whl
