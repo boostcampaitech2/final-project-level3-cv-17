@@ -5,7 +5,13 @@ import re
 import os
 import random
 import numpy as np
+from importlib import import_module
+
+
 from torch.optim import optimizer
+from torchvision import transforms
+from torchvision.transforms.transforms import ToTensor
+from albumentations.pytorch.transforms import ToTensorV2
 from tqdm import tqdm
 from pathlib import Path
 from collections import defaultdict
@@ -87,9 +93,17 @@ def train(train_dir, val_dir, model_dir, args):
     
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
+    
+    dataset_module = getattr(import_module("dataset"), args.dataset)  # default: BaseAugmentation
+    train_set = dataset_module(
+        data_dir=train_dir,
+        mode='train'
+    )
+    val_set = dataset_module(
+        data_dir=val_dir,
+        mode='valid'
+    )
 
-    train_set = SmallDataset(train_dir, 'train')
-    val_set = SmallDataset(val_dir, 'valid')
     num_classes = len(os.listdir(train_dir))
     print(f'num_classes = {num_classes}')
 
@@ -107,6 +121,7 @@ def train(train_dir, val_dir, model_dir, args):
         num_workers=4,
         shuffle=True,
         pin_memory=use_cuda,
+        drop_last=True
     )
 
     # -- model
@@ -204,53 +219,60 @@ def train(train_dir, val_dir, model_dir, args):
                 for label, pred in zip(labels, preds):
                     if label==pred:
                         val_acc_list[pred.cpu()] += 1
-
+                
 
             val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
             best_val_loss = min(best_val_loss, val_loss)
 
             # save 
-            if val_acc > best_val_acc:
-                print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+            if args.save:
+                if val_acc > best_val_acc:
+                    print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+                    checkpoint = {
+                        'epoch': epoch + 1,
+                        'state_dict': model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                    }
+                    save_model(
+                            model=model,
+                            path=f"{save_dir}/best.pt",
+                            device=device,
+                            ckp=checkpoint,
+                        )
+                    best_val_acc = val_acc
                 checkpoint = {
-                    'epoch': epoch + 1,
-                    'state_dict': model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                }
+                        'epoch': epoch + 1,
+                        'state_dict': model.state_dict(),
+                        'optimizer': optimizer.state_dict()
+                    }
                 save_model(
                         model=model,
-                        path=f"{save_dir}/best.pt",
+                        path=f"{save_dir}/last.pt",
                         device=device,
                         ckp=checkpoint,
                     )
-                best_val_acc = val_acc
-            checkpoint = {
-                    'epoch': epoch + 1,
-                    'state_dict': model.state_dict(),
-                    'optimizer': optimizer.state_dict()
-                }
-            save_model(
-                    model=model,
-                    path=f"{save_dir}/last.pt",
-                    device=device,
-                    ckp=checkpoint,
-                )
 
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
             )
             for i, cls in enumerate(sorted(os.listdir(val_dir))):
-                acc_by_class = val_acc_list[i]/len(os.listdir(os.path.join(val_dir, cls)))
-                
+                acc_by_class = val_acc_list[i] / val_set.get_nums_by_class(i)                
                 print(f'{i} : {acc_by_class:4.2%}', end=' ')
+
             print()
             # wandb logging
             img_log = []
-            for idx_batch, (input, pred, label) in enumerate(zip(inputs, preds, labels)):
-                caption = f'pred : {pred.cpu()}, label : {label.cpu()}'
-                img_log.append(wandb.Image(input.cpu(), caption=caption))
+            for input, pred, label in zip(inputs, preds, labels):
+                pred, label = pred.cpu(), label.cpu()
+                if pred != label:
+                    caption = f'pred : {pred}, label : {label}'
+                    pred_img = cv2.imread(val_set.get_samples(pred))
+                    pred_img = cv2.cvtColor(pred_img, cv2.COLOR_BGR2RGB)
+                    
+                    img_log.append(wandb.Image(pred_img, caption=f'pred : {pred}'))
+                    img_log.append(wandb.Image(input.cpu(), caption=f'label : {label}'))
             wandb.log({
                     'val/acc': val_acc,
                     'val/loss': val_loss,
@@ -274,12 +296,13 @@ if __name__ == '__main__':
     parser.add_argument('--log_interval', type=int, default=20, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
     parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
-    parser.add_argument('--save', dest='save', default=True, action='store_true')
+    parser.add_argument('--save', dest='save', default=False, action='store_true')
+    parser.add_argument('--dataset', type=str, default='SmallDataset', help='dataset type (default: SmallDataset)')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train/dumpling'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/val/dumpling'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'new_data/train'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'new_data/valid'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model2'))
 
     args = parser.parse_args()
     print(args)
