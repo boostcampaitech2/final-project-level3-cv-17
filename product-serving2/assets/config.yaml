@@ -1,0 +1,8 @@
+classes: '../assets/custom_classes.csv'
+model_path:
+  detection: '../assets/detection/best.torchscript.pt'
+  bigclass: '../assets/big.pt'
+  kimchi: '../assets/kimchi/best15.pt'
+  vegetable: '../assets/vegetable/best15.pt'
+
+    
