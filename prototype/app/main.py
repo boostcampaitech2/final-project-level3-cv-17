@@ -37,13 +37,13 @@ Quantity_Model = load_quantity_model()
 def hello_world():
     return {"hello": "world"}
 
-class xywh(BaseModel):
+class xyxy(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
 
 class Det(BaseModel):
     id: UUID = Field(default_factory=uuid4) 
-    xywhs: List[xywh] = Field(default_factory=list)
+    xyxys: List[xyxy] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
@@ -54,7 +54,7 @@ class Product(BaseModel):
     # default_factory : Product Class가 처음 만들어질 때 호출되는 함수를 uuid4로 하겠다 => Product 클래스를 생성하면 uuid4를 만들어서 id에 저장
     name: str
 
-class DetectImage(xywh):
+class DetectImage(xyxy):
     name: str = "inference_image"
     result: Optional[List]
 
@@ -86,17 +86,17 @@ orders = []
 
 @app.post("/detect", description="Detecting...")
 async def detect(files: List[UploadFile] = File(...)):
-    xywhs = []
+    xyxys = []
     for file in files:
         image_bytes = await file.read()
         img = Image.open(io.BytesIO(image_bytes)).resize((640,640))
         img = img.convert('RGB')
 
         inference_result = run(Det_Model, img0=np.array(img))
-        xywh = DetectImage(result=inference_result)
-        xywhs.append(xywh)
+        xyxy = DetectImage(result=inference_result)
+        xyxys.append(xyxy)
 
-    return Det(xywhs=xywhs)
+    return Det(xyxys=xyxys)
 
 @app.post("/order", description="음식 분류")
 async def make_order(file: bytes = File(...)):

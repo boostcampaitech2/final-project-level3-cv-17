@@ -47,7 +47,7 @@ def main():
                 ]
 
         response = requests.post("http://localhost:8000/detect", files=files)
-        xyxys = response.json()["xywhs"][0]["result"]
+        xyxys = response.json()["xyxys"][0]["result"]
         for xyxy in xyxys:
             h, w, c = image_np.shape
             x1, y1 = int(w*xyxy[0]), int(h*xyxy[1])
