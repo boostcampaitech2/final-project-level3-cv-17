@@ -29,16 +29,15 @@ def main():
     st.sidebar.title("User Info")
 
     with st.sidebar.form(key='sidebar form'):
-        with st.sidebar:
-            st.subheader("Gender")
-            gender = st.selectbox('Select', ['Male','Female'])
-            st.subheader("Height")
-            height = st.slider('Height(cm)', min_value=101, max_value=200)
-            st.subheader("Weight")
-            weight = st.slider('Weight(kg)', min_value=20, max_value=200)
-            st.subheader("Activity")
-            activity = st.radio('Activity', ['Light','Moderate','Active'])
-            submit_button = st.form_submit_button(label='Submit')
+        st.subheader("Gender")
+        gender = st.selectbox('Select', ['Male','Female'])
+        st.subheader("Height")
+        height = st.slider('Height(cm)', min_value=101, max_value=200, value=150)
+        st.subheader("Weight")
+        weight = st.slider('Weight(kg)', min_value=20, max_value=200, value=70)
+        st.subheader("Activity")
+        activity = st.radio('Activity', ['Light','Moderate','Active'])
+        submit_button = st.form_submit_button(label='Submit')
 
     if submit_button:
         avg_weight = (height-100) * 0.9
