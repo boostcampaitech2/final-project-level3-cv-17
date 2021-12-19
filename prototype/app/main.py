@@ -47,13 +47,14 @@ class Food(BaseModel):
     # default_factory : Product Class가 처음 만들어질 때 호출되는 함수를 uuid4로 하겠다 => Product 클래스를 생성하면 uuid4를 만들어서 id에 저장
     big_label: str
     small_label: str
-    xyxy: list
-    info: dict
+    xyxy: List
+    info: Dict
 
 
 class Intake(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     Foods: List[Food] = Field(default_factory=list)
+    Total: Dict
     # 최초에 빈 list를 만들어서 저장한다
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
@@ -86,6 +87,7 @@ async def detect(files: List[UploadFile] = File(...)):
         print(f'img shape : {w, h}')
 
         xyxys = run(Det_Model, img0=np.array(img.resize((640, 640))))
+        total = {'carbohydrate': 0, 'protein': 0, 'fat': 0, 'sugar': 0, 'kcal': 0}
         foods = []
         for xyxy in xyxys:            
             x1, y1 = int(w*xyxy[0]), int(h*xyxy[1])
@@ -101,11 +103,13 @@ async def detect(files: List[UploadFile] = File(...)):
             name, carbohydrate, protein, fat, sugar, kcal = small_labels
             c, p, f, s, k = [round(float(v) * quantity * 0.2, 2) for v in [carbohydrate, protein, fat, sugar, kcal]]
             info = {'quantity': quantity, 'carbohydrate': c, 'protein': p, 'fat': f, 'sugar': s, 'kcal': k}
+            for k, v in zip(total, [c, p, f, s, k]):
+                total[k] += v
 
             food = Food(big_label=big_label, small_label=name, xyxy=[x1, y1, x2, y2], info=info)
             foods.append(food)
 
-        new_order = Intake(Foods=foods)
+        new_order = Intake(Foods=foods, Total=total)
         orders.append(new_order)
 
     return new_order

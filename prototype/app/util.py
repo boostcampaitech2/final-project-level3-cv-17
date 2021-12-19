@@ -22,3 +22,13 @@ def transform(im):
             Normalize(mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)),
         ])
     return transform(im)
+
+def get_concat_h(im, n):
+    d, v = divmod(n, 10)
+    half_img = im.resize((im.width//2, im.height//2))
+    dst = Image.new('RGB', (im.width * d + (im.width//2) * v, im.height), (255,255,255))
+    for x in range(0, im.width * d, im.width):
+        dst.paste(im, (x, 0))
+    for x in range(im.width * d, im.width * d + (im.width//2) * v, im.width//2):
+        dst.paste(half_img, (x, im.height//2))
+    return dst
