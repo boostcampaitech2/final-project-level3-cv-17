@@ -1,2 +1,0 @@
-classes: '../assets/custom_classes.csv'
-model_path: '../assets/kimchi/best15.pt'
