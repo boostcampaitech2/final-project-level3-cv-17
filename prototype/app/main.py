@@ -99,7 +99,7 @@ async def detect(files: List[UploadFile] = File(...)):
             food = Food(big_label=big_label, small_label=name, xyxy=[x1, y1, x2, y2], info=info)
             foods.append(food)
 
-        new_order = Intake(products=foods)
+        new_order = Intake(Foods=foods)
         orders.append(new_order)
 
     return new_order
