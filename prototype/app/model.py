@@ -1,6 +1,5 @@
 import math
 
-import mlconfig
 import torch
 from torch import nn
 
@@ -145,7 +144,6 @@ def _round_repeats(repeats, depth_mult):
     return int(math.ceil(depth_mult * repeats))
 
 
-# @mlconfig.register
 class EfficientNet(nn.Module):
 
     def __init__(self, width_mult=1.0, depth_mult=1.0, dropout_rate=0.2, num_classes=1000):
@@ -222,11 +220,6 @@ def _efficientnet(arch, pretrained, progress, num_classes, **kwargs):
     return model
 
 
-# @mlconfig.register
 def efficientnet_b0(pretrained=True, num_classes=100, progress=True, **kwargs):
     return _efficientnet('efficientnet_b0', pretrained, progress, num_classes, **kwargs)
-
     
-# @mlconfig.register
-def efficientnet_b4(pretrained=True, num_classes=100, progress=True, **kwargs):
-    return _efficientnet('efficientnet_b4', pretrained, progress, num_classes, **kwargs)

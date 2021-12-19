@@ -1,8 +1,6 @@
-import streamlit as st
-import collections
 import functools
-import inspect
-import textwrap
+
+import streamlit as st
 
 
 def cache_on_button_press(label, **cache_kwargs):
