@@ -1,6 +1,7 @@
 import io
 import numpy as np
 from PIL import Image
+import torch 
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.param_functions import Depends
@@ -12,7 +13,7 @@ from datetime import datetime
 
 from model import efficientnet_b0 
 from predict import run, get_class_model, get_detect_model, predict_from_image_byte, get_big_model, predict_big_class
-from utils import get_config
+from utils import get_config, transform_image
 
 app = FastAPI()
 
@@ -22,7 +23,25 @@ orders = []
 
 class Food(BaseModel):
     id: UUID = Field(default_factory=uuid4)
-    name: str
+    big_label: str
+    # small_label: str
+    xyxy: list
+    # info: dict
+
+class Intake(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    Foods: List[Food] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    def add_food(self, food: Food):
+        if food.id in [existing_product.id for existing_product in self.products]:
+            return self
+
+        self.Foods.append(food)
+        self.updated_at = datetime.now()
+        return self
+
 
 class Order(BaseModel):
     id: UUID = Field(default_factory=uuid4)
@@ -42,58 +61,40 @@ class Order(BaseModel):
         self.updated_at = datetime.now()
         return self
 
-class InferenceImageProduct(Food):
-    name: str = Optional[str]
-    # result: Optional[List]
-
-class DetectedImage(Food):
-    name: str = Optional[str]
-    xywh: Optional[List]
-    result: Optional[List]
-
-@app.get("/order/{order_id}", description="Order 정보를 가져옵니다")
-async def get_order(order_id: UUID) -> Union[Order, dict]:
-    order = get_order_by_id(order_id=order_id)
-    if not order:
-        return {"message": "주문 정보를 찾을 수 없습니다"}
-    return order
-
-def get_order_by_id(order_id: UUID) -> Optional[Order]:
-    return next((order for order in orders if order.id == order_id), None)
-
-
 @app.get("/order", description="주문 리스트를 가져옵니다")
 async def get_orders() -> List[Order]:
     return orders
 
 @app.post("/detect", description="Detecting...")
 async def make_order(files: List[UploadFile] = File(...)):
-    xywhs = []
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     for file in files:
         image_bytes = await file.read()
-        img = Image.open(io.BytesIO(image_bytes)).resize((640,640))
+        img = Image.open(io.BytesIO(image_bytes))
         img = img.convert('RGB')
+        img_np = np.array(img)
+        h, w, c = img_np.shape
 
-        inference_result = run(Det_Model, img0=np.array(img))
+        inference_result = run(Det_Model, img0=np.array(img.resize((640, 640))))
 
-        for xywh in inference_result:
-            new_food = DetectedImage(name='detection',xywh=xywh)
-            xywhs.append(new_food)
+        foods = []
+        for xyxy in inference_result:            
+            x1, y1 = int(w*xyxy[0]), int(h*xyxy[1])
+            x2, y2 = int(w*xyxy[2]), int(h*xyxy[3])
 
-    new_order = Order(products=xywhs)
-    orders.append(new_order)
-    return new_order
+            cropped_img = img.crop((x1, y1, x2, y2))   
+            cropped_img = transform_image(cropped_img).to(device)
 
-@app.post("/order", description="Big class Classifying...")
-async def update_order(file: bytes = File(...)):    
-    image_bytes = file
-    inference_result = predict_big_class(model=Big_Model, img=image_bytes)
-    # InferenceImageProduct Class 생성해서 product로 정의
-    product = InferenceImageProduct(name=inference_result)
+            big_label = predict_big_class(model=Big_Model, img=cropped_img)
+            food = Food(big_label=big_label, xyxy=[x1, y1, x2, y2])
+            foods.append(food)
+
+        new_order = Intake(Foods=foods)
+        orders.append(new_order)
+
+    return new_order   
   
-    # orders.append(new_order)
-    return product
-
 # @app.post("/order", description="주문을 요청합니다")
 # async def classify(files: List[UploadFile] = File(...),
 #                      model: efficientnet_b0 = Depends(get_class_model()),

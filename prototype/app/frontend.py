@@ -13,13 +13,13 @@ from utils import pil_draw_rect, pil_draw_text
 # SETTING PAGE CONFIG TO WIDE MODE
 st.set_page_config(page_title = "DoYouKnowKimchi", page_icon="random", layout="wide")
 
-activity_dic = {'Light':30,'Moderate':35,'Active':40}
-
 def image_to_byte_array(image:Image):
   imgByteArr = io.BytesIO()
   image.save(imgByteArr, format='png')
   imgByteArr = imgByteArr.getvalue()
   return imgByteArr
+
+activity_dic = {'Light':30,'Moderate':35,'Active':40}
 
 def main():
     st.image('../assets/headerbg.jpg', use_column_width  = True)
@@ -49,47 +49,28 @@ def main():
             want_kcal = st.slider('Calories intake setting (kcal)', min_value=kcal*0.5, value=kcal, max_value = kcal*1.5)
             kcal_submit = st.form_submit_button(label='Submit')
 
-        if kcal_submit:
-            uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
 
-            if uploaded_file:
-                image_bytes = uploaded_file.getvalue()
-                image = Image.open(io.BytesIO(image_bytes))
-                image_np = np.array(image)
-                st.write("Classifying...")
+    if uploaded_file:
+        image_bytes = uploaded_file.getvalue()
+        image = Image.open(io.BytesIO(image_bytes))
 
-                # 기존 stremalit 코드
-                # _, y_hat = get_prediction(model, image_bytes)
-                # label = config['classes'][y_hat.item()]
+        files = [
+            ('files', (uploaded_file.name, image_bytes,
+                    uploaded_file.type))
+        ]
 
-                files = [
-                    ('files', (uploaded_file.name, image_bytes,
-                            uploaded_file.type))
-                ]
-                response = requests.post("http://localhost:8000/detect", files=files)
+        with st.spinner('Wait for it...'):
+            response = requests.post("http://localhost:8000/detect", files=files)
 
-                foods = response.json()
-                for food in foods['products']:
-                    xyxy = food['xywh']
-                    h, w, c = image_np.shape
-                    x1, y1 = int(w*xyxy[0]), int(h*xyxy[1])
-                    x2, y2 = int(w*xyxy[2]), int(h*xyxy[3])
+            for food in response.json()['Foods']:
+                id, big_label, xyxy  = food.values()
+                x1, y1, x2, y2 = xyxy
 
-                    cropped_img = image.crop((x1, y1, x2, y2))            
-                    cropped_img_bytes = image_to_byte_array(cropped_img)
-                    
-                    print(len(cropped_img_bytes))
-                    cr = Image.open(io.BytesIO(cropped_img_bytes))
+                image = pil_draw_rect(image, (x1, y1), (x2, y2))
+                image = pil_draw_text(image, x1+10, y1+10, big_label, (255,255,255))
 
-                    # print(len(cropped_img_bytes), type(cropped_img_bytes))
-
-                    response = requests.post('http://localhost:8000/order', files = {'file' : cropped_img_bytes})
-                    big_label = response.json()['name']
-
-                    image = pil_draw_rect(image, (x1, y1), (x2, y2))
-                    image = pil_draw_text(image, x1+10, y1+10, big_label, (255,255,255))
-
-                st.image(image, caption='Detected Image')
+            st.image(image, caption='Detected Image')
 
 main()
 # root_password = "password"

@@ -34,21 +34,16 @@ def get_detect_model():
     return model
 
 def get_big_model():
-    config = get_config()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = efficientnet_b0(num_classes=12).to(device)
-    # model.load_state_dict(torch.load(config['model_path']['bigclass'], map_location=device)['state_dict'])
-    model.load_state_dict(torch.load('../assets/big.pt', map_location=device)['state_dict'])
-
+    model = torch.jit.load('../assets/big.ts', map_location=device)
+    model.eval()
     return model
 
 def predict_big_class(model, img):
-    config = get_config()
-    transformed_image = transform_image(img)
-    model.eval()
-    outputs = model(transformed_image)
-    y_hat = torch.argmax(outputs, dim=-1)
-    pred = class_lst[y_hat]
+    with torch.no_grad():
+        img = img.unsqueeze(0)
+        out = model(img)
+        preds = torch.argmax(out, dim=-1)
+        pred = class_lst[preds.item()]
 
     return pred
     

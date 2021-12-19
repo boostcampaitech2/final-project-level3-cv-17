@@ -5,21 +5,20 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import logging
 
-import albumentations
-import albumentations.pytorch
+from torchvision import transforms
+from torchvision.transforms import *
+
 import torch
 import torchvision
 
-def transform_image(image_bytes: bytes) -> torch.Tensor:
-    transform = albumentations.Compose([
-            albumentations.Resize(height=224, width=224),
-            albumentations.Normalize(mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)),
-            albumentations.pytorch.transforms.ToTensorV2()
+def transform_image(image_bytes):
+    transform = transforms.Compose([
+            Resize((224, 224)),
+            ToTensor(),
+            Normalize(mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)),
         ])
-    image = Image.open(io.BytesIO(image_bytes))
-    image = image.convert('RGB')
-    image_array = np.array(image)
-    return transform(image=image_array)['image'].unsqueeze(0)
+
+    return transform(image_bytes)
 
 def get_config(config_path: str = "../assets/config.yaml"):
     import yaml
