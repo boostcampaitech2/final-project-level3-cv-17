@@ -37,46 +37,31 @@ Quantity_Model = load_quantity_model()
 def hello_world():
     return {"hello": "world"}
 
-class xyxy(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    name: str
-
-class Det(BaseModel):
-    id: UUID = Field(default_factory=uuid4) 
-    xyxys: List[xyxy] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-
-class Product(BaseModel):
+class Food(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     # Field : 모델 스키마 또는 복잡한 Validation 검사를 위해 필드에 대한 추가 정보를 제공할 때 사용
     # uuid : 고유 식별자, Universally Unique Identifier
     # default_factory : Product Class가 처음 만들어질 때 호출되는 함수를 uuid4로 하겠다 => Product 클래스를 생성하면 uuid4를 만들어서 id에 저장
-    name: str
-
-class DetectImage(xyxy):
-    name: str = "inference_image"
-    result: Optional[List]
-
-class ClassificationImage(Product):
-    name: str = "classification_image"
-    result: Optional[Union[int, str, list]]
+    big_label: str
+    small_label: str
+    xyxy: list
+    info: dict
 
 
-class Order(BaseModel):
+class Intake(BaseModel):
     id: UUID = Field(default_factory=uuid4)
-    products: List[Product] = Field(default_factory=list)
+    Foods: List[Food] = Field(default_factory=list)
     # 최초에 빈 list를 만들어서 저장한다
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
-    def add_product(self, product: Product):
+    def add_food(self, food: Food):
         # add_product는 Product를 인자로 받아서, 해당 id가 이미 존재하는지 체크 => 없다면 products 필드에 추가
         # 업데이트할 때 updated_at을 현재 시각으로 업데이트
-        if product.id in [existing_product.id for existing_product in self.products]:
+        if food.id in [existing_product.id for existing_product in self.products]:
             return self
 
-        self.products.append(product)
+        self.Foods.append(food)
         self.updated_at = datetime.now()
         return self
 
@@ -84,74 +69,39 @@ class Order(BaseModel):
 orders = []
 # 실무에서는 보통 이 경우에 데이터베이스를 이용해서 주문을 저장하지만, 데이터베이스를 따로 학습하지 않았으므로 In Memory인 리스트에 저장
 
-@app.post("/detect", description="Detecting...")
+@app.post("/order", description="Detecting...")
 async def detect(files: List[UploadFile] = File(...)):
     xyxys = []
     for file in files:
         image_bytes = await file.read()
-        img = Image.open(io.BytesIO(image_bytes)).resize((640,640))
+        img = Image.open(io.BytesIO(image_bytes))
         img = img.convert('RGB')
+        img_np = np.array(img)
+        h, w, c = img_np.shape
+        print(f'img shape : {w, h}')
 
-        inference_result = run(Det_Model, img0=np.array(img))
-        xyxy = DetectImage(result=inference_result)
-        xyxys.append(xyxy)
+        xyxys = run(Det_Model, img0=np.array(img.resize((640, 640))))
+        foods = []
+        for xyxy in xyxys:            
+            x1, y1 = int(w*xyxy[0]), int(h*xyxy[1])
+            x2, y2 = int(w*xyxy[2]), int(h*xyxy[3])
 
-    return Det(xyxys=xyxys)
+            cropped_img = img.crop((x1, y1, x2, y2))            
 
-@app.post("/order", description="음식 분류")
-async def make_order(file: bytes = File(...)):
-    # Depends : 의존성 주입
-    # 반복적이고 공통적인 로직이 필요할 때 사용할 수 있음
-    # 모델을 Load, Config Load
-    # async, Depends 검색해서 또 학습해보기!
-    products = []
-    
-    image_bytes = file
-    inference_result = get_big_prediction(model=Big_Model, img=image_bytes)
-    # InferenceImageProduct Class 생성해서 product로 정의
-    product = ClassificationImage(result=inference_result)
-    products.append(product)
+            big_label = get_big_prediction(model=Big_Model, img=cropped_img)
+            small_labels = get_small_prediction(img=cropped_img, model_info=Small_Model, cls=big_label)
+            quantity = get_quantity_prediction(model=Quantity_Model, img=cropped_img) + 1
+        
+            name, carbohydrate, protein, fat, sugar, kcal = small_labels
+            c, p, f, s, k = [round(float(v) * quantity * 0.2, 2) for v in [carbohydrate, protein, fat, sugar, kcal]]
+            info = {'quantity': quantity, 'carbohydrate': c, 'protein': p, 'fat': f, 'sugar': s, 'kcal': k}
 
-    new_order = Order(products=products)
-    orders.append(new_order)
-    return new_order
+            food = Food(big_label=big_label, small_label=name, xyxy=[x1, y1, x2, y2], info=info)
+            foods.append(food)
 
-@app.post("/order/{cls}", description="음식 세부 분류")
-async def make_order(cls:str,
-                    file: bytes = File(...)
-                     ):
-    # Depends : 의존성 주입
-    # 반복적이고 공통적인 로직이 필요할 때 사용할 수 있음
-    # 모델을 Load, Config Load
-    # async, Depends 검색해서 또 학습해보기!
-    products = []
-    image_bytes = file
-    inference_result = get_small_prediction(img=image_bytes, model_info=Small_Model, cls=cls)
-    # InferenceImageProduct Class 생성해서 product로 정의
-    product = ClassificationImage(result=inference_result)
-    products.append(product)
+        new_order = Intake(products=foods)
+        orders.append(new_order)
 
-    new_order = Order(products=products)
-    orders.append(new_order)
-    return new_order
-
-@app.post("/quant", description="음식 양 추정")
-async def make_order(file: bytes = File(...)):
-    # Depends : 의존성 주입
-    # 반복적이고 공통적인 로직이 필요할 때 사용할 수 있음
-    # 모델을 Load, Config Load
-    # async, Depends 검색해서 또 학습해보기!
-    products = []
-    image_bytes = file
-    inference_result = get_quantity_prediction(model=Quantity_Model, img=image_bytes)
-    # InferenceImageProduct Class 생성해서 product로 정의
-    print(inference_result, type(inference_result))
-    product = ClassificationImage(result=inference_result)
-    print(product)
-    products.append(product)
-
-    new_order = Order(products=products)
-    orders.append(new_order)
     return new_order
 
 if __name__ == '__main__':

@@ -15,13 +15,10 @@ def xywh2xyxy(x):
     y[3] = (h * (x[1] + x[3] / 2))
     return y.round(4)
 
-def transform(image_bytes):
+def transform(im):
     transform = transforms.Compose([
             Resize((224, 224)),
             ToTensor(),
             Normalize(mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)),
         ])
-    im = Image.open(io.BytesIO(image_bytes))
-    im = im.convert('RGB')
-    # image_array = np.array(im)
     return transform(im)
