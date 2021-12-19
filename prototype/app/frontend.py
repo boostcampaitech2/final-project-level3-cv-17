@@ -31,9 +31,7 @@ def main():
 
     if uploaded_file:
         image_bytes = uploaded_file.getvalue()
-        print(len(image_bytes), type(image_bytes))
         image = Image.open(io.BytesIO(image_bytes))
-        print(type(image))
 
         st.image(image, caption='Uploaded Image')
         st.write("Detecting...")
@@ -56,8 +54,8 @@ def main():
 
             image = pil_draw_rect(image, (x1, y1), (x2, y2))
             image = pil_draw_text(image, x1+10, y1+10, big_label, (255,0,0))
-
-        st.image(image, caption='Detected Image')
+ 
+        st.image(image, caption='Detected Image') 
         
 
 @cache_on_button_press('Authenticate')
