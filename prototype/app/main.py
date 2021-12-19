@@ -2,6 +2,7 @@
 import io
 import os
 import numpy as np
+import torch
 from PIL import Image
 from os.path import join
 from pathlib import Path
@@ -19,6 +20,7 @@ from datetime import datetime
 # from app.model import MyEfficientNet, get_model, get_config, predict_from_image_byte
 from model import efficientnet_b0
 from predict import get_big_prediction, get_small_prediction, get_quantity_prediction, load_big_model, load_small_model, load_quantity_model
+from util import transform
 
 import uvicorn
 
@@ -27,6 +29,7 @@ app = FastAPI()
 
 MODEL_DIR_PATH = os.path.join(Path(__file__).parent.parent, "models")
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 Det_Model = load_det_model(weights=join(MODEL_DIR_PATH, 'best.torchscript.pt'))
 Big_Model = load_big_model()
 Small_Model  = load_small_model()
@@ -72,6 +75,8 @@ orders = []
 @app.post("/order", description="Detecting...")
 async def detect(files: List[UploadFile] = File(...)):
     xyxys = []
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+     
     for file in files:
         image_bytes = await file.read()
         img = Image.open(io.BytesIO(image_bytes))
@@ -86,7 +91,8 @@ async def detect(files: List[UploadFile] = File(...)):
             x1, y1 = int(w*xyxy[0]), int(h*xyxy[1])
             x2, y2 = int(w*xyxy[2]), int(h*xyxy[3])
 
-            cropped_img = img.crop((x1, y1, x2, y2))            
+            cropped_img = img.crop((x1, y1, x2, y2))   
+            cropped_img = transform(cropped_img).to(device)
 
             big_label = get_big_prediction(model=Big_Model, img=cropped_img)
             small_labels = get_small_prediction(img=cropped_img, model_info=Small_Model, cls=big_label)

@@ -45,8 +45,6 @@ def load_small_model():
 
 # @cache_on_button_press('Rough Prediction')
 def get_big_prediction(model, img):
-    img = transform(img)
-    img = img.to(device)
     with torch.no_grad():
         img = img.unsqueeze(0)
         out = model(img)
@@ -59,8 +57,6 @@ def get_big_prediction(model, img):
 # @cache_on_button_press('Detailied prediction')
 def get_small_prediction(img, model_info, cls):
     labels = []
-    img = transform(img)
-    img = img.to(device) 
     with torch.no_grad():
         img = img.unsqueeze(0)
         out = model_info['model'][cls](img)
@@ -76,8 +72,6 @@ def get_small_prediction(img, model_info, cls):
     return labels
 
 def get_quantity_prediction(model, img):
-    img = transform(img)
-    img = img.to(device)
     with torch.no_grad():
         img = img.unsqueeze(0)
         out = model(img)
