@@ -21,6 +21,19 @@ def image_to_byte_array(image:Image):
 
 activity_dic = {'Light':30,'Moderate':35,'Active':40}
 
+def goodnbad(compare, mode, s):
+    if mode:
+        if compare:
+            st.success(f'Good😊 {s}')
+        else:
+            st.error(f'Bad😢 {s}')
+    else:        
+        if compare:
+            st.error(f'Bad😢 {s}')
+        else:
+            st.success(f'Good😊 {s}')
+                    
+
 def main():
     st.image('../assets/headerbg.jpg', use_column_width  = True)
     st.title("Welcome to DoYouKnowKimchi!")
@@ -54,6 +67,16 @@ def main():
         with st.form(key='kcal'):
             st.header(f"Suggested calories intake: {kcal}")
             want_kcal = st.slider('Calories intake setting (kcal)', min_value=kcal*0.5, value=kcal, max_value = kcal*1.5)
+            # 탄수화물 
+            want_car = st.slider('Set the carbohydrate ratio (%)', min_value=0, value=33, max_value=100)
+            want_car = want_car * want_kcal / 100
+            # 단백질
+            want_pro = st.slider('Set the protain ratio (%)', min_value=0, value=33, max_value=100)
+            want_pro = want_pro * want_kcal / 100
+            # 지방
+            want_fat = st.slider('Set the fat ratio (%)', min_value=0, value=33, max_value=100)
+            want_fat = want_fat * want_kcal / 100
+
             kcal_submit = st.form_submit_button(label='Submit')
             if kcal_submit:
                 st.session_state.kcal_submit = 1
@@ -86,6 +109,9 @@ def main():
                 
                 st.image(image, caption='Detected Image') 
                 T_kcal = response.json()['Total']['kcal']
+                T_car = response.json()['Total']['carbohydrate'] * 4
+                T_pro = response.json()['Total']['protein'] * 4
+                T_fat = response.json()['Total']['fat'] * 9
                 KC = int(T_kcal//19)
 
                 if T_kcal <= want_kcal:
@@ -93,9 +119,12 @@ def main():
                     image_kimchi = get_concat_h(Image.open('../assets/김치맨2.png'), KC)
                 else:
                     st.error(f'Bad😢 Total kcal : {T_kcal}, goal_kcal : {want_kcal}')
-                    image_kimchi = get_concat_h(Image.open('../assets/kcman.jpg'), KC)
+                    image_kimchi = get_concat_h(Image.open('../assets/김치맨1.jpg'), KC)
+                
+                goodnbad(T_car, want_car, True, 'carbohydrate')
+                goodnbad(T_pro, want_pro, True, 'protein')
+                goodnbad(T_fat, want_fat, True, 'fat')
 
-                print(image_kimchi.size)
                 st.image(image_kimchi, caption=f'This is {KC} Kimchi')
 
 main()
