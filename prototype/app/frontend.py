@@ -32,11 +32,13 @@ def main():
         st.subheader("Gender")
         gender = st.selectbox('Select', ['Male','Female'])
         st.subheader("Height")
-        height = st.slider('Height(cm)', min_value=101, max_value=200, value=150)
+        height = st.slider('Height(cm)', min_value=101, max_value=250, value=150)
         st.subheader("Weight")
         weight = st.slider('Weight(kg)', min_value=20, max_value=200, value=70)
         st.subheader("Activity")
         activity = st.radio('Activity', ['Light','Moderate','Active'])
+        with st.expander("See explanation"):
+            st.write("asdfasdfasdf")
         submit_button = st.form_submit_button(label='Submit')
 
     if submit_button:
@@ -47,7 +49,7 @@ def main():
 
             want_kcal = st.slider('Calories intake setting (kcal)', min_value=kcal*0.5, value=kcal, max_value = kcal*1.5)
             kcal_submit = st.form_submit_button(label='Submit')
-
+    
     uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
 
     if uploaded_file:
