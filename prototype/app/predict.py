@@ -8,18 +8,16 @@ import torch
 from model import efficientnet_b0
 from utils import transform_image, get_config, set_logging, check_img_size, time_sync, non_max_suppression, scale_coords
 import yaml
+from collections import defaultdict
 from typing import Tuple
 import pandas as pd
 
-class_lst = ['deopbab', 'dumpling', 'fried', 'herbs', 'kimchi', 'meat', 
-'noodle', 'rice', 'seafood', 'stew', 'sushi', 'vegetable']
+config = get_config()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def get_class_model(cls) -> efficientnet_b0:
-    config = get_config()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     classes = pd.read_csv(config['classes'])
     num_class = classes[classes['EN']==cls]
 
@@ -28,25 +26,57 @@ def get_class_model(cls) -> efficientnet_b0:
     # model = torch.jit.load(torch.load(config['model_path']))
     return model
 
-def get_detect_model():
-    config = get_config()
+def load_det_model():
     model = torch.jit.load(config['model_path']['detection'])
     return model
 
-def get_big_model():
-    model = torch.jit.load('../assets/big.ts', map_location=device)
+def load_big_model():
+    model = torch.jit.load(config['model_path']['bigclass'], map_location=device)
     model.eval()
     return model
 
-def predict_big_class(model, img):
+def load_small_model(bigclass):
+    model = torch.jit.load(config['model_path']['smallclass'][bigclass], map_location=device)
+    model.eval()
+    return model
+
+def load_quantity_model():
+    model = torch.jit.load('models/quantity.ts', map_location=device)
+    model.eval()
+    return model
+
+def get_big_prediction(model, img):
     with torch.no_grad():
         img = img.unsqueeze(0)
         out = model(img)
         preds = torch.argmax(out, dim=-1)
-        pred = class_lst[preds.item()]
+        pred = config['class_lst'][preds.item()]
 
     return pred
-    
+
+def get_small_predicitions(bigclass, model, img):
+    pred=[]
+    food_info = pd.read_csv(config['classes'])
+    with torch.no_grad():
+        img = img.unsqueeze(0)
+        out = model(img)
+        preds = torch.argmax(out, dim=-1)
+        small_classes = food_info[food_info['EN']==bigclass]
+        pred.append(small_classes.iloc[preds]['소분류'].item())
+        pred.append(small_classes.iloc[preds]['탄수화물'].item())
+        pred.append(small_classes.iloc[preds]['단백질'].item())
+        pred.append(small_classes.iloc[preds]['지방'].item())
+        pred.append(small_classes.iloc[preds]['당'].item())
+        pred.append(small_classes.iloc[preds]['칼로리(kcal)'].item())
+    return pred
+
+def get_quantity_prediction(model, img):
+    with torch.no_grad():
+        img = img.unsqueeze(0)
+        out = model(img)
+        pred = torch.argmax(out, dim=-1)
+    return int(pred.item())
+
 def predict_from_image_byte(model: efficientnet_b0, image_bytes: bytes, config: Dict[str, Any]) -> List[str]:
     transformed_image = transform_image(image_bytes)
     model.eval()

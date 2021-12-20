@@ -65,9 +65,12 @@ def main():
             response = requests.post("http://localhost:8000/detect", files=files)
 
             for food in response.json()['Foods']:
-                id, big_label, xyxy  = food.values()
+                id, big_label, name, xyxy, info = food.values()
                 x1, y1, x2, y2 = xyxy
-
+                q, carbohydrate, protein, fat, sugar, kcal = info.values()
+                st.write(f"소분류={name}")
+                st.write(f'탄수화물 = {carbohydrate}g, 단백질 = {protein}g, 지방 = {fat}g, 당 = {sugar}g')
+                st.write(f'칼로리 = {kcal} kcal')
                 image = pil_draw_rect(image, (x1, y1), (x2, y2))
                 image = pil_draw_text(image, x1+10, y1+10, big_label, (255,255,255))
 

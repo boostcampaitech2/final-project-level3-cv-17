@@ -1,6 +1,21 @@
-classes: '../assets/custom_classes.csv'
+classes: '../assets/Food_info.csv'
+class_lst:
+  ['deopbab', 'dumpling', 'fried', 'herbs', 'kimchi', 'meat', 
+  'noodle', 'rice', 'seafood', 'stew', 'sushi', 'vegetable']
 model_path:
-  detection: '../assets/detection/best.torchscript.pt'
-  bigclass: '../assets/big.pt'
-  kimchi: '../assets/kimchi/best15.pt'
-  vegetable: '../assets/vegetable/best15.pt'
+  detection: 'models/best.torchscript.pt'
+  bigclass: 'models/big.ts'
+  smallclass: 
+    deopbab: 'models/deopbab.ts'
+    dumpling: 'models/dumpling.ts'
+    fried: 'models/fried.ts'
+    herbs: 'models/herbs.ts'
+    kimchi: 'models/kimchi.ts'
+    meat: 'models/meat.ts'
+    noodle: 'models/noodle.ts'
+    rice: 'models/rice.ts'
+    seafood: 'models/seafood.ts'
+    stew: 'models/stew.ts'
+    sushi: 'models/sushi.ts'
+    vegetable: 'models/vegetable.ts'
+    
