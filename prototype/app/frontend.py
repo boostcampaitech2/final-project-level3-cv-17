@@ -65,10 +65,10 @@ def main():
             st.session_state.side_submit = 1
 
     if st.session_state.side_submit:
-        avg_weight = int((height-100) * 0.9)
+        avg_weight = (height-100) * 0.9
         kcal = avg_weight * activity_dic[activity]
         with st.form(key='kcal'):
-            st.header(f"Suggested calories intake: {kcal}")
+            st.header(f"Suggested calories intake: {round(kcal, 2)}")
             want_kcal = st.slider('Calories intake setting (kcal)', min_value=kcal*0.5, value=kcal, max_value = kcal*1.5)
             # 탄수화물 
             want_car = st.slider('Set the carbohydrate ratio (%)', min_value=0, value=33, max_value=100)
@@ -122,9 +122,9 @@ def main():
                     st.error(f'Bad😢 Total kcal : {T_kcal}, goal_kcal : {want_kcal}')
                     image_kimchi = get_concat_h(Image.open('../assets/김치맨1.jpg'), KC)
                 
-                goodnbad(T_car, want_car, True, 'carbohydrate')
-                goodnbad(T_pro, want_pro, True, 'protein')
-                goodnbad(T_fat, want_fat, True, 'fat')
+                goodnbad(T_car <= want_car, True, 'carbohydrate')
+                goodnbad(T_pro <= want_pro, True, 'protein')
+                goodnbad(T_fat <= want_fat, True, 'fat')
 
                 st.image(image_kimchi, caption=f'This is {KC} Kimchi')
                 st.subheader(f"You have consumed {KC} Kimchi!")
