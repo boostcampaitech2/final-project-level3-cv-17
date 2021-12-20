@@ -212,7 +212,7 @@ def pil_draw_rect(image, point1, point2):
 
 def pil_draw_text(image, point1, point2, txt, color):
     draw = ImageDraw.Draw(image)
-    fnt = ImageFont.truetype("utils/PTSerif-Regular.ttf", 30)
+    fnt = ImageFont.truetype("../assets/PTSerif-Regular.ttf", 30)
     w, h = fnt.getsize(txt)
     draw.rectangle((point1, point2, point1 + w, point2 + h), fill=(0,125,255))
     draw.text((point1, point2), txt, color, fnt)

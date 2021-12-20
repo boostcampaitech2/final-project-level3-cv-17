@@ -28,6 +28,11 @@ def main():
 
     st.sidebar.title("User Info")
 
+    if 'side_submit' not in st.session_state:
+        st.session_state.side_submit = 0
+    if 'kcal_submit' not in st.session_state:
+        st.session_state.kcal_submit = 0
+
     with st.sidebar.form(key='sidebar form'):
         st.subheader("Gender")
         gender = st.selectbox('Select', ['Male','Female'])
@@ -40,41 +45,45 @@ def main():
         with st.expander("See explanation"):
             st.write("asdfasdfasdf")
         submit_button = st.form_submit_button(label='Submit')
+        if submit_button:
+            st.session_state.side_submit = 1
 
-    if submit_button:
+    if st.session_state.side_submit:
         avg_weight = (height-100) * 0.9
         kcal = avg_weight * activity_dic[activity]
         with st.form(key='kcal'):
             st.header(f"Suggested calories intake: {kcal}")
-
             want_kcal = st.slider('Calories intake setting (kcal)', min_value=kcal*0.5, value=kcal, max_value = kcal*1.5)
             kcal_submit = st.form_submit_button(label='Submit')
+            if kcal_submit:
+                st.session_state.kcal_submit = 1
     
-    uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
+    if st.session_state.kcal_submit:
+        uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
 
-    if uploaded_file:
-        image_bytes = uploaded_file.getvalue()
-        image = Image.open(io.BytesIO(image_bytes))
+        if uploaded_file:
+            image_bytes = uploaded_file.getvalue()
+            image = Image.open(io.BytesIO(image_bytes))
 
-        files = [
-            ('files', (uploaded_file.name, image_bytes,
-                    uploaded_file.type))
-        ]
+            files = [
+                ('files', (uploaded_file.name, image_bytes,
+                        uploaded_file.type))
+            ]
 
-        with st.spinner('Wait for it...'):
-            response = requests.post("http://localhost:8000/detect", files=files)
+            with st.spinner('Wait for it...'):
+                response = requests.post("http://localhost:8000/intake", files=files)
 
-            for food in response.json()['Foods']:
-                id, big_label, name, xyxy, info = food.values()
-                x1, y1, x2, y2 = xyxy
-                q, carbohydrate, protein, fat, sugar, kcal = info.values()
-                st.write(f"소분류={name}")
-                st.write(f'탄수화물 = {carbohydrate}g, 단백질 = {protein}g, 지방 = {fat}g, 당 = {sugar}g')
-                st.write(f'칼로리 = {kcal} kcal')
-                image = pil_draw_rect(image, (x1, y1), (x2, y2))
-                image = pil_draw_text(image, x1+10, y1+10, big_label, (255,255,255))
+                for food in response.json()['Foods']:
+                    id, big_label, name, xyxy, info = food.values()
+                    x1, y1, x2, y2 = xyxy
+                    q, carbohydrate, protein, fat, sugar, kcal = info.values()
+                    st.write(f"소분류={name}")
+                    st.write(f'탄수화물 = {carbohydrate}g, 단백질 = {protein}g, 지방 = {fat}g, 당 = {sugar}g')
+                    st.write(f'칼로리 = {kcal} kcal')
+                    image = pil_draw_rect(image, (x1, y1), (x2, y2))
+                    image = pil_draw_text(image, x1+10, y1+10, name, (255,255,255))
 
-            st.image(image, caption='Detected Image')
+                st.image(image, caption='Detected Image')
 
 main()
 # root_password = "password"

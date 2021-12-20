@@ -45,11 +45,7 @@ class Intake(BaseModel):
         self.updated_at = datetime.now()
         return self
 
-@app.get("/order", description="주문 리스트를 가져옵니다")
-async def get_orders() -> List[Intake]:
-    return orders
-
-@app.post("/detect", description="Detecting...")
+@app.post("/intake", description="Detecting...")
 async def make_order(files: List[UploadFile] = File(...)):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
