@@ -23,17 +23,13 @@ def image_to_byte_array(image:Image):
 
 activity_dic = {'Light':30,'Moderate':35,'Active':40}
 
-def goodnbad(compare, mode, s):
-    if mode:
-        if compare:
-            st.success(f'Good😊')
-        else:
-            st.error(f'Bad😢')
-    else:        
-        if compare:
-            st.error(f'Bad😢')
-        else:
-            st.success(f'Good😊')
+def goodnbad(f, g):
+    if f/g > 1.2:
+        st.error(f'Too Much😢')
+    elif g/f > 1.2:        
+        st.warning(f'Too Little😢')
+    else:
+        st.success(f'Good😊')
                     
 
 def main():
@@ -165,8 +161,8 @@ def main():
             fat = [T_fat/tot*100, want_pro/want_tot*100]
 
             fig = go.Figure(data=[
-                go.Bar(name='Carb', y=names, x=car,orientation='h'),
-                go.Bar(name='Pro', y=names, x=pro,orientation='h'),
+                go.Bar(name='Carbohydrate', y=names, x=car,orientation='h'),
+                go.Bar(name='Protein', y=names, x=pro,orientation='h'),
                 go.Bar(name='Fat', y=names, x=fat,orientation='h')
             ])
             # Change the bar mode
@@ -178,13 +174,13 @@ def main():
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.subheader("탄수화물")
-                goodnbad(T_car<= want_car, True, 'carbohydrate')
+                goodnbad(T_car/tot*100, want_car/want_tot*100)
             with col2:
                 st.subheader("단백질")
-                goodnbad(T_pro<= want_pro, True, 'protein')
+                goodnbad(T_pro/tot*100, want_fat/want_tot*100)
             with col3:
                 st.subheader("지방")
-                goodnbad(T_fat<= want_fat, True, 'fat')               
+                goodnbad(T_fat/tot*100, want_pro/want_tot*100)               
 
 
 main()
