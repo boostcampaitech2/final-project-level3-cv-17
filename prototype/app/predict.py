@@ -55,20 +55,20 @@ def get_big_prediction(model, img):
     return pred
 
 def get_small_predicitions(bigclass, model, img):
-    pred=[]
+    preds=[]
     food_info = pd.read_csv(config['classes'])
     with torch.no_grad():
         img = img.unsqueeze(0)
         out = model(img)
-        preds = torch.argmax(out, dim=-1)
+        pred = torch.argmax(out, dim=-1)
         small_classes = food_info[food_info['EN']==bigclass]
-        pred.append(small_classes.iloc[preds]['소분류'].item())
-        pred.append(small_classes.iloc[preds]['탄수화물'].item())
-        pred.append(small_classes.iloc[preds]['단백질'].item())
-        pred.append(small_classes.iloc[preds]['지방'].item())
-        pred.append(small_classes.iloc[preds]['당'].item())
-        pred.append(small_classes.iloc[preds]['칼로리(kcal)'].item())
-    return pred
+        preds.append(small_classes.iloc[pred]['소분류'].item())
+        preds.append(small_classes.iloc[pred]['탄수화물'].item())
+        preds.append(small_classes.iloc[pred]['단백질'].item())
+        preds.append(small_classes.iloc[pred]['지방'].item())
+        preds.append(small_classes.iloc[pred]['당'].item())
+        preds.append(small_classes.iloc[pred]['칼로리(kcal)'].item())
+    return preds
 
 def get_quantity_prediction(model, img):
     with torch.no_grad():

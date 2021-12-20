@@ -19,6 +19,19 @@ def transform_image(image_bytes):
         ])
 
     return transform(image_bytes)
+    
+def get_concat_h(im, n):
+    if n == 0:
+        n = 1
+        
+    d, v = divmod(n, 10)
+    half_img = im.resize((im.width//2, im.height//2))
+    dst = Image.new('RGB', (im.width * d + (im.width//2) * v, im.height), (255,255,255))
+    for x in range(0, im.width * d, im.width):
+        dst.paste(im, (x, 0))
+    for x in range(im.width * d, im.width * d + (im.width//2) * v, im.width//2):
+        dst.paste(half_img, (x, im.height//2))
+    return dst
 
 def get_config(config_path: str = "../assets/config.yaml"):
     import yaml
@@ -212,7 +225,7 @@ def pil_draw_rect(image, point1, point2):
 
 def pil_draw_text(image, point1, point2, txt, color):
     draw = ImageDraw.Draw(image)
-    fnt = ImageFont.truetype("../assets/PTSerif-Regular.ttf", 30)
+    fnt = ImageFont.truetype("../assets/NanumSquareB.ttf", 30)
     w, h = fnt.getsize(txt)
     draw.rectangle((point1, point2, point1 + w, point2 + h), fill=(0,125,255))
     draw.text((point1, point2), txt, color, fnt)

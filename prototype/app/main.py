@@ -1,5 +1,6 @@
 import io
 import numpy as np
+import torch
 from PIL import Image
 import torch 
 
@@ -14,6 +15,8 @@ from datetime import datetime
 from model import efficientnet_b0 
 from predict import run, load_small_model, load_det_model, load_big_model, load_quantity_model, get_big_prediction, get_small_predicitions, get_quantity_prediction
 from utils import get_config, transform_image
+
+import uvicorn
 
 app = FastAPI()
 
@@ -34,10 +37,13 @@ class Food(BaseModel):
 class Intake(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     Foods: List[Food] = Field(default_factory=list)
+    Total: Dict
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
     def add_food(self, food: Food):
+        # add_product는 Product를 인자로 받아서, 해당 id가 이미 존재하는지 체크 => 없다면 products 필드에 추가
+        # 업데이트할 때 updated_at을 현재 시각으로 업데이트
         if food.id in [existing_product.id for existing_product in self.products]:
             return self
 
@@ -55,12 +61,12 @@ async def make_order(files: List[UploadFile] = File(...)):
         img = img.convert('RGB')
         img_np = np.array(img)
         h, w, c = img_np.shape
+        print(f'img shape : {w, h}')
 
-        inference_result = run(Det_Model, img0=np.array(img.resize((640, 640))))
-        
+        xyxys = run(Det_Model, img0=np.array(img.resize((640, 640))))
         total = {'carbohydrate': 0, 'protein': 0, 'fat': 0, 'sugar': 0, 'kcal': 0}
         foods = []
-        for xyxy in inference_result:            
+        for xyxy in xyxys:            
             x1, y1 = int(w*xyxy[0]), int(h*xyxy[1])
             x2, y2 = int(w*xyxy[2]), int(h*xyxy[3])
 
@@ -80,22 +86,26 @@ async def make_order(files: List[UploadFile] = File(...)):
             food = Food(big_label=big_label, small_label=name, xyxy=[x1, y1, x2, y2], info=info)
             foods.append(food)
 
-        new_order = Intake(Foods=foods)
+        new_order = Intake(Foods=foods, Total=total)
         orders.append(new_order)
 
-    return new_order   
-  
-# @app.post("/order", description="주문을 요청합니다")
-# async def classify(files: List[UploadFile] = File(...),
-#                      model: efficientnet_b0 = Depends(load_small_model()),
-#                      config: Dict[str, Any] = Depends(get_config)):
-#     products = []
-#     for file in files:
-#         image_bytes = await file.read()
-#         inference_result = predict_from_image_byte(model=model, image_bytes=image_bytes, config=config)
-#         product = InferenceImageProduct(name = '김치',result=inference_result)
-#         products.append(product)
+    return new_order
 
-#     new_order = Order(products=products)
-#     orders.append(new_order)
-#     return new_order
+if __name__ == '__main__':
+    uvicorn.run(app, host='127.0.0.1', port=8000)
+
+# TODO: 주문 구현, 상품 구현, 결제 구현
+    # TODO: 주문(Order) = Request
+    # TODO: 상품(Product) = 마스크 분류 모델 결과
+    # TODO: 결제 = Order.bill
+    # 2개의 컴포넌트
+# TODO: Order, Product Class 구현
+    # TODO: Order의 products 필드로 Product의 List(하나의 주문에 여러 제품이 있을 수 있음)
+
+# TODO: get_orders(GET) : 모든 Order를 가져옴
+# TODO: get_order(GET) : order_id를 사용해 Order를 가져옴
+# TODO: get_order_by_id : get_order에서 사용할 함수
+# TODO: make_order(POST) : model, config를 가져온 후 predict => Order products에 넣고 return
+# TODO: update_order(PATCH) : order_id를 사용해 order를 가져온 후, update
+# TODO: update_order_by_id : update_order에서 사용할 함수
+# TODO: get_bill(GET) : order_id를 사용해 order를 가져온 후, order.bill return

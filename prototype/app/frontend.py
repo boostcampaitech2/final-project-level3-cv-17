@@ -8,7 +8,7 @@ from PIL import Image
 
 import streamlit as st
 from confirm_button_hack import cache_on_button_press
-from utils import pil_draw_rect, pil_draw_text
+from utils import pil_draw_rect, pil_draw_text, get_concat_h
 
 # SETTING PAGE CONFIG TO WIDE MODE
 st.set_page_config(page_title = "DoYouKnowKimchi", page_icon="random", layout="wide")
@@ -83,7 +83,20 @@ def main():
                     image = pil_draw_rect(image, (x1, y1), (x2, y2))
                     image = pil_draw_text(image, x1+10, y1+10, name, (255,255,255))
 
-                st.image(image, caption='Detected Image')
+                
+                st.image(image, caption='Detected Image') 
+                T_kcal = response.json()['Total']['kcal']
+                KC = int(T_kcal//19)
+
+                if T_kcal <= want_kcal:
+                    st.success(f'Good😊 Total kcal : {T_kcal}, goal_kcal : {want_kcal}')
+                    image_kimchi = get_concat_h(Image.open('../assets/김치맨2.png'), KC)
+                else:
+                    st.error(f'Bad😢 Total kcal : {T_kcal}, goal_kcal : {want_kcal}')
+                    image_kimchi = get_concat_h(Image.open('../assets/kcman.jpg'), KC)
+
+                print(image_kimchi.size)
+                st.image(image_kimchi, caption=f'This is {KC} Kimchi')
 
 main()
 # root_password = "password"
