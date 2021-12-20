@@ -220,13 +220,13 @@ def clip_coords(boxes, shape):
 
 def pil_draw_rect(image, point1, point2):
     draw = ImageDraw.Draw(image)
-    draw.rectangle((point1, point2), outline=(0, 125, 255), width=3)
+    draw.rectangle((point1, point2), outline=(255, 75, 75), width=3)
     return image
 
 def pil_draw_text(image, point1, point2, txt, color):
     draw = ImageDraw.Draw(image)
-    fnt = ImageFont.truetype("../assets/NanumSquareB.ttf", 30)
+    fnt = ImageFont.truetype("../assets/NanumSquareB.ttf", 25)
     w, h = fnt.getsize(txt)
-    draw.rectangle((point1, point2, point1 + w, point2 + h), fill=(0,125,255))
+    draw.rectangle((point1, point2, point1 + w, point2 + h), fill=(255, 75, 75))
     draw.text((point1, point2), txt, color, fnt)
     return image
