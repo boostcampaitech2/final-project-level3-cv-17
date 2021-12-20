@@ -5,7 +5,7 @@ from pathlib import Path
 
 import requests
 from PIL import Image
-
+import pandas as pd
 import streamlit as st
 from confirm_button_hack import cache_on_button_press
 from utils import pil_draw_rect, pil_draw_text, get_concat_h
@@ -42,18 +42,21 @@ def main():
         weight = st.slider('Weight(kg)', min_value=20, max_value=200, value=70)
         st.subheader("Activity")
         activity = st.radio('Activity', ['Light','Moderate','Active'])
-        with st.expander("See explanation"):
-            st.write("asdfasdfasdf")
+        with st.expander("Activity란?"):
+            st.subheader("활동지수")
+            st.write("Light: 앉아서 주로 생활하거나 매일 가벼운 움직임만 하며 활동량이 적은 경우")
+            st.write("Moderate: 규칙적인 생활로 보통의 활동량을 가진 경우")
+            st.write("Active: 육체노동 등 평소 신체 활동량이 많은 경우")
         submit_button = st.form_submit_button(label='Submit')
         if submit_button:
             st.session_state.side_submit = 1
 
     if st.session_state.side_submit:
-        avg_weight = (height-100) * 0.9
+        avg_weight = int((height-100) * 0.9)
         kcal = avg_weight * activity_dic[activity]
         with st.form(key='kcal'):
             st.header(f"Suggested calories intake: {kcal}")
-            want_kcal = st.slider('Calories intake setting (kcal)', min_value=kcal*0.5, value=kcal, max_value = kcal*1.5)
+            want_kcal = st.slider('Calories intake setting (kcal)', min_value=kcal//3, value=kcal, max_value = kcal*3)
             kcal_submit = st.form_submit_button(label='Submit')
             if kcal_submit:
                 st.session_state.kcal_submit = 1
@@ -73,18 +76,16 @@ def main():
             with st.spinner('Wait for it...'):
                 response = requests.post("http://localhost:8000/intake", files=files)
 
+                food_list = []
                 for food in response.json()['Foods']:
                     id, big_label, name, xyxy, info = food.values()
                     x1, y1, x2, y2 = xyxy
                     q, carbohydrate, protein, fat, sugar, kcal = info.values()
-                    st.write(f"소분류={name}")
-                    st.write(f'탄수화물 = {carbohydrate}g, 단백질 = {protein}g, 지방 = {fat}g, 당 = {sugar}g')
-                    st.write(f'칼로리 = {kcal} kcal')
+                    food_info = {'소분류':name, 'kcal': kcal, '탄수화물': carbohydrate, '단백질':protein, '지방': fat, '당': sugar}
+                    food_list.append(food_info)
                     image = pil_draw_rect(image, (x1, y1), (x2, y2))
                     image = pil_draw_text(image, x1+10, y1+10, name, (255,255,255))
 
-                
-                st.image(image, caption='Detected Image') 
                 T_kcal = response.json()['Total']['kcal']
                 KC = int(T_kcal//19)
 
@@ -97,6 +98,10 @@ def main():
 
                 print(image_kimchi.size)
                 st.image(image_kimchi, caption=f'This is {KC} Kimchi')
+                st.subheader(f"You have consumed {KC} Kimchi!")
+                st.image(image, caption='Detected Image') 
+                st.table(pd.DataFrame(food_list))                
+
 
 main()
 # root_password = "password"
