@@ -143,11 +143,11 @@ def main():
 
             st.subheader("섭취 칼로리")
             if want_kcal[0]<=T_kcal<=want_kcal[1]:
-                st.success(f'Good!😊 Total kcal : {T_kcal}')
+                st.success(f'Good!😊 Total kcal : {round(T_kcal)}')
             elif T_kcal < want_kcal[0]:
-                st.error(f'Not Enough!🤤 Total kcal : {T_kcal}')
+                st.error(f'Not Enough!🤤 Total kcal : {round(T_kcal)}')
             else:
-                st.error(f"Too Much!😭 Total kcal : {T_kcal}")
+                st.error(f"Too Much!😭 Total kcal : {round(T_kcal)}")
             
             ###################### 그래프
             tot = T_car + T_fat + T_pro
