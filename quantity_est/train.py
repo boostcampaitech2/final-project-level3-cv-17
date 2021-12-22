@@ -16,6 +16,8 @@ from torch.optim.lr_scheduler import StepLR
 from dataset import ClsDataset
 from model import efficientnet_b4, efficientnet_b0
 
+import wandb
+
 def convert_model_to_torchscript(
     model: nn.Module, path
 ) -> torch.jit.ScriptModule:
@@ -64,6 +66,7 @@ def increment_path(path, exist_ok=False, sep='', mkdir=True):
 
 
 def train(train_dir, val_dir, model_dir, args):
+    wandb.init(project='Final_Project', entity='hansss', name=f'{args.name}')
     save_dir = increment_path(os.path.join(model_dir, args.name)) # 모델 저장 경로
     
     use_cuda = torch.cuda.is_available()
@@ -138,7 +141,12 @@ def train(train_dir, val_dir, model_dir, args):
                     f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
-
+                wandb.log({
+                    'train/loss': train_loss,
+                    'train/lr': current_lr,
+                    'train/acc':train_acc,
+                    'train/epoch':epoch
+                })
                 loss_value = 0
                 matches = 0
         scheduler.step()
@@ -206,7 +214,12 @@ def train(train_dir, val_dir, model_dir, args):
 
                 print(f'{cls} : {acc_by_class:4.2%}', end=' ')
             print()
-        
+            
+            wandb.log({
+                    'val/acc': val_acc,
+                    'val/loss': val_loss,
+                    'val/epoch': epoch                 
+            })
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

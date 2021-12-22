@@ -3,8 +3,15 @@ import glob
 from math import gamma
 import re
 import os
+import random
 import numpy as np
+from importlib import import_module
+
+
 from torch.optim import optimizer
+from torchvision import transforms
+from torchvision.transforms.transforms import ToTensor
+from albumentations.pytorch.transforms import ToTensorV2
 from tqdm import tqdm
 from pathlib import Path
 from collections import defaultdict
@@ -19,6 +26,15 @@ from dataset import BigDataset, SmallDataset
 from model import efficientnet_b4, efficientnet_b0
 
 import wandb
+
+def seed_everything(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    # torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    # np.random.seed(seed)
+    random.seed(seed)
 
 def convert_model_to_torchscript(
     model: nn.Module, path
@@ -68,15 +84,26 @@ def increment_path(path, exist_ok=False, sep='', mkdir=True):
 
 
 def train(train_dir, val_dir, model_dir, args):
-    wandb.init(project='final', entity='hansss', name=f'{args.name}')
+    seed_everything(args.seed)
 
-    save_dir = increment_path(os.path.join(model_dir, args.name)) # 모델 저장 경로
+    wandb.init(project='Final_Project', entity='yoorichae', name=f'{args.name}')
+    
+    if args.save:
+        save_dir = increment_path(os.path.join(model_dir, args.name)) # 모델 저장 경로
     
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
+    
+    dataset_module = getattr(import_module("dataset"), args.dataset)  # default: BaseAugmentation
+    train_set = dataset_module(
+        data_dir=train_dir,
+        mode='train'
+    )
+    val_set = dataset_module(
+        data_dir=val_dir,
+        mode='valid'
+    )
 
-    train_set = BigDataset(train_dir, 'train')
-    val_set = BigDataset(val_dir, 'valid')
     num_classes = len(os.listdir(train_dir))
     print(f'num_classes = {num_classes}')
 
@@ -92,30 +119,34 @@ def train(train_dir, val_dir, model_dir, args):
         val_set,
         batch_size=args.batch_size,
         num_workers=4,
-        shuffle=False,
+        shuffle=True,
         pin_memory=use_cuda,
+        drop_last=True
     )
 
     # -- model
     model = efficientnet_b0(num_classes=num_classes)
     model = model.to(device)
     # model = nn.DataParallel(model)
+
     # -- loss & optim
     criterion = nn.CrossEntropyLoss()
-    optimizer = SGD(
-        params=model.parameters(),
-        lr=args.lr,
-        momentum=0.9,
-        weight_decay=0.01    
-    )
-    # optimizer = torch.optim.Adam(
-    #     model.parameters(),
+    # criterion = F1_Loss(classes=args.num_classes)
+
+    # optimizer = SGD(
+    #     params=model.parameters(),
     #     lr=args.lr,
-    #     )
-    # scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
-    print(len(val_set), len(val_loader))
-    T_0 = int(len(train_loader) * args.epochs//5)
-    scheduler = CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0)
+    #     momentum=0.9,
+    #     weight_decay=0.01    
+    # )
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=args.lr,
+        )
+    scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    
+    # T_0 = int(len(train_loader) * args.epochs//5)
+    # scheduler = CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0)
 
 
     best_val_acc = 0
@@ -139,11 +170,11 @@ def train(train_dir, val_dir, model_dir, args):
 
             loss.backward()
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
 
             loss_value += loss.item()
             matches += (preds==labels).sum().item()
-            
+
             if (idx + 1) % args.log_interval == 0:
                 train_loss = loss_value / args.log_interval
                 train_acc = matches / args.batch_size / args.log_interval
@@ -152,15 +183,17 @@ def train(train_dir, val_dir, model_dir, args):
                     f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
+                
                 wandb.log({
-                    'loss': train_loss,
-                    'lr': current_lr,
-                    'acc':train_acc,
-                    'epoch':epoch
+                    'train/loss': train_loss,
+                    'train/lr': current_lr,
+                    'train/acc':train_acc,
+                    'train/epoch':epoch
                 })
                 loss_value = 0
                 matches = 0
         # pbar.close()
+        scheduler.step()
 
         #val loop
         with torch.no_grad():
@@ -170,7 +203,7 @@ def train(train_dir, val_dir, model_dir, args):
             val_acc_items = []
             val_acc_list = np.zeros(num_classes)
 
-            for val_batch in val_loader:
+            for idx, val_batch in enumerate(val_loader):
                 inputs, labels = val_batch
                 inputs = inputs.to(device)
                 labels = labels.to(device)
@@ -182,50 +215,70 @@ def train(train_dir, val_dir, model_dir, args):
                 acc_item = (labels==preds).sum().item()    
                 val_loss_items.append(loss_item)
                 val_acc_items.append(acc_item)
-                # val_acc_dict[labels.item()].append(acc_item)
+
                 for label, pred in zip(labels, preds):
                     if label==pred:
                         val_acc_list[pred.cpu()] += 1
+                
 
             val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
             best_val_loss = min(best_val_loss, val_loss)
-            if val_acc > best_val_acc:
-                print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+
+            # save 
+            if args.save:
+                if val_acc > best_val_acc:
+                    print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+                    checkpoint = {
+                        'epoch': epoch + 1,
+                        'state_dict': model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                    }
+                    save_model(
+                            model=model,
+                            path=f"{save_dir}/best.pt",
+                            device=device,
+                            ckp=checkpoint,
+                        )
+                    best_val_acc = val_acc
                 checkpoint = {
-                    'epoch': epoch + 1,
-                    'state_dict': model.state_dict(),
-                    'optimizer': optimizer.state_dict()
-                }
+                        'epoch': epoch + 1,
+                        'state_dict': model.state_dict(),
+                        'optimizer': optimizer.state_dict()
+                    }
                 save_model(
                         model=model,
-                        path=f"{save_dir}/best.pt",
+                        path=f"{save_dir}/last.pt",
                         device=device,
                         ckp=checkpoint,
                     )
-                # torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
-                best_val_acc = val_acc
-            checkpoint = {
-                    'epoch': epoch + 1,
-                    'state_dict': model.state_dict(),
-                    'optimizer': optimizer.state_dict()
-                }
-            save_model(
-                    model=model,
-                    path=f"{save_dir}/last.pt",
-                    device=device,
-                    ckp=checkpoint,
-                )
-            # torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
+
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
             )
             for i, cls in enumerate(sorted(os.listdir(val_dir))):
-                acc_by_class = val_acc_list[i]/len(os.listdir(os.path.join(val_dir, cls)))
-                
+                acc_by_class = val_acc_list[i] / val_set.get_nums_by_class(i)                
                 print(f'{i} : {acc_by_class:4.2%}', end=' ')
+
             print()
+            # wandb logging
+            img_log = []
+            for input, pred, label in zip(inputs, preds, labels):
+                pred, label = pred.cpu(), label.cpu()
+                if pred != label:
+                    caption = f'pred : {pred}, label : {label}'
+                    pred_img = cv2.imread(val_set.get_samples(pred))
+                    pred_img = cv2.cvtColor(pred_img, cv2.COLOR_BGR2RGB)
+                    
+                    img_log.append(wandb.Image(pred_img, caption=f'pred : {pred}'))
+                    img_log.append(wandb.Image(input.cpu(), caption=f'label : {label}'))
+            wandb.log({
+                    'val/acc': val_acc,
+                    'val/loss': val_loss,
+                    'val/epoch': epoch,
+                    'val_img': img_log                    
+            })
         
 
 if __name__ == '__main__':
@@ -235,6 +288,7 @@ if __name__ == '__main__':
     # load_dotenv(verbose=True)
 
     # Data and model checkpoints directories
+    parser.add_argument('--seed', type=int, default=2021, help='random seed (default: 2021)')
     parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train (default: 1)')
     parser.add_argument('--batch_size', type=int, default=32, help='input batch size for training (default: 64)')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate (default: 1e-3)')
@@ -242,11 +296,13 @@ if __name__ == '__main__':
     parser.add_argument('--log_interval', type=int, default=20, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
     parser.add_argument('--num_classes', type=int, default=12, help='Class Number')
+    parser.add_argument('--save', dest='save', default=False, action='store_true')
+    parser.add_argument('--dataset', type=str, default='SmallDataset', help='dataset type (default: SmallDataset)')
 
     # Container environment
-    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'data/train'))
-    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'data/valid'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model'))
+    parser.add_argument('--train_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', 'new_data/train'))
+    parser.add_argument('--val_dir', type=str, default=os.environ.get('SM_CHANNEL_VALID', 'new_data/valid'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', 'model2'))
 
     args = parser.parse_args()
     print(args)

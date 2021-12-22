@@ -7,4 +7,11 @@
 *.pyc
 *.zip
 *.pth
+<<<<<<< HEAD
+=======
+*.pt
+*.ts
+*debug*
+*wandb*
+>>>>>>> origin/classification
 data/
